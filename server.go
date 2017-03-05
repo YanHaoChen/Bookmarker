@@ -15,6 +15,7 @@ type Users struct {
     Account string `gorm:"primary_key" form:"account" json:"account"`
     Passwd  string `gorm:"not null" form:"passwd" json:"passwd"`
     Name string `gorm:"not null" form:"name" json:"name"`
+    Email string `gorm:"not null" form:"email" json:"email"`
     Books []Books `gorm:"AssociationForeignKey:UserID" form:"books" json:"books"`
 }
 type Books struct {
@@ -33,6 +34,11 @@ type BookRecords struct {
     BookID int
     Pages int `gorm:"not null" form:"pages" json:"pages"`
     Note string `form:"note" json:"note"`
+}
+
+type LoginForm struct {
+    Account     string `form:"account" json:"account"`
+    Passwd string `form:"passwd" json:"passwd"`
 }
 
 func InitDb() *gorm.DB {
@@ -76,11 +82,12 @@ func Cors() gin.HandlerFunc {
     }
 }
 var router *gin.Engine
+var loginToken map[string]string
 
 func main() {
     router = gin.Default()
     router.Use(Cors())
-
+    loginToken = make(map[string]string)
     /* view */
     router.StaticFile("/bootstrap/css/bootstrap.min.css","./bower_components/bootstrap/dist/css/bootstrap.min.css")
     router.StaticFile("/bootstrap/css/bootstrap.min.css.map","./bower_components/bootstrap/dist/css/bootstrap.min.css.map")
@@ -88,12 +95,12 @@ func main() {
     router.StaticFile("/bootstrap/css/bootstrap-theme.min.css.map","./bower_components/bootstrap/dist/css/bootstrap-theme.min.css.map")
     router.StaticFile("/bootstrap/css/signin.css","./bower_components/bootstrap/dist/css/signin.css")
     router.LoadHTMLFiles("templates/dashboard.html")
-    router.LoadHTMLFiles("templates/welcome.html")
+
 
     view := router.Group("view")
     {
         view.GET("/welcome", Welcome)
-        //view.GET("/dashboard", Dashboard)
+        view.POST("/dashboard", Dashboard)
     }
 
     /* api */
@@ -107,22 +114,35 @@ func main() {
 }
 
 func Welcome(c *gin.Context) {
+    router.LoadHTMLFiles("templates/welcome.html")
+
     c.HTML(http.StatusOK, "welcome.html", gin.H{
     })
 }
 
 func Dashboard(c *gin.Context) {
-    c.HTML(http.StatusOK, "dashboard.html", gin.H{
-    })
+    db := InitDb()
+    defer db.Close()
+
+    var loginData LoginForm
+    c.Bind(&loginData)
+    if loginData.Account != "" && loginData.Passwd != "" {
+        var user Users
+        db.Where("account = ? AND passwd = ?",loginData.Account , loginData.Passwd).First(&user)
+        if user.Account != "" {
+            token := randToken()
+            loginToken[token] = user.Account
+            router.LoadHTMLFiles("templates/dashboard.html")
+            c.HTML(http.StatusOK, "dashboard.html", gin.H{
+                "token":token,
+            })
+        } else {
+            c.JSON(404, gin.H{"status":"Not Found."})
+        }
+    }
+
 }
 
-type LoginForm struct {
-    Account     string `form:"account" json:"account"`
-    Passwd string `form:"passwd" json:"passwd"`
-}
-
-
-var loginToken map[string]string
 
 func Login(c *gin.Context) {
     db := InitDb()
@@ -130,18 +150,17 @@ func Login(c *gin.Context) {
 
     var loginData LoginForm
     c.Bind(&loginData)
-    c.JSON(200, gin.H{"acc":loginData.Account,"ps":loginData.Passwd})
     if loginData.Account != "" && loginData.Passwd != "" {
         var user Users
         db.Where("account = ? AND passwd = ?",loginData.Account , loginData.Passwd).First(&user)
         if user.Account != "" {
-            loginToken[randToken()] = user.Account
-            c.JSON(200, gin.H{"status":user})
+            token := randToken()
+            loginToken[token] = user.Account
+            c.JSON(200, gin.H{"token":token})
         } else {
             c.JSON(404, gin.H{"status":"Not Found."})
         }
     }
-    c.JSON(404, gin.H{"status":"Not Found."})
 }
 
 func CreateUser(c *gin.Context) {
@@ -150,10 +169,10 @@ func CreateUser(c *gin.Context) {
     var user Users
 
     c.Bind(&user)
-    if user.Account != "" && user.Passwd != "" && user.Name != "" {
+    if user.Account != "" && user.Passwd != "" && user.Name != "" && user.Email != "" {
         db.Create(&user)
         c.JSON(201, gin.H{"success": user})
     } else {
-        c.JSON(422, gin.H{"error": "Fields are empty"})
+        c.JSON(422, gin.H{"error": "There are some empty fields ."})
     }
 }
