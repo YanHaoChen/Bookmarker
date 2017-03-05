@@ -21,14 +21,18 @@ type Books struct {
     gorm.Model
     UserID int `form:"userID" json:"userID"`
     Name string `gorm:"not null" form:"name" json:"name"`
+    Category string `gorm:"not null" form:"category" json:"category"`
     Pages  int `gorm:"not null" form:"pages" json:"pages"`
     Records []BookRecords `gorm:"AssociationForeignKey:BookID" form:"records" json:"records"`
+    Description string `form:"description" json:"description"`
+
 }
 
 type BookRecords struct {
     gorm.Model
     BookID int
-    pages int `gorm:"not null" form:"pages" json:"pages"`
+    Pages int `gorm:"not null" form:"pages" json:"pages"`
+    Note string `form:"note" json:"note"`
 }
 
 func InitDb() *gorm.DB {
@@ -60,7 +64,7 @@ func checkErr(err error) {
 }
 
 func randToken() string {
-	b := make([]byte, 20)
+	b := make([]byte, 15)
 	rand.Read(b)
 	return fmt.Sprintf("%x", b)
 }
@@ -116,7 +120,7 @@ func Login(c *gin.Context) {
         var user Users
         db.Where("account = ? AND passwd = ?",loginData.Account , loginData.Passwd).First(&user)
         if user.Account != "" {
-            loginToken[user.Account] = randToken()
+            loginToken[randToken()] = user.Account
             c.JSON(200, gin.H{"status":user})
         } else {
             c.JSON(404, gin.H{"status":"Not Found."})
