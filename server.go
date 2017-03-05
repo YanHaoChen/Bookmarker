@@ -75,22 +75,26 @@ func Cors() gin.HandlerFunc {
         c.Next()
     }
 }
+var router *gin.Engine
 
 func main() {
-    router :=gin.Default()
+    router = gin.Default()
     router.Use(Cors())
 
     /* view */
-    router.StaticFile("/bootstrap.min.css","./bower_components/bootstrap/dist/css/bootstrap.min.css")
-    router.StaticFile("/bootstrap.min.css.map","./bower_components/bootstrap/dist/css/bootstrap.min.css.map")
-    router.StaticFile("/bootstrap-theme.min.css","./bower_components/bootstrap/dist/css/bootstrap-theme.min.css")
-    router.StaticFile("/bootstrap-theme.min.css.map","./bower_components/bootstrap/dist/css/bootstrap-theme.min.css.map")
-    router.LoadHTMLFiles("templates/index.html")
-    // router.GET("/index", func(c *gin.Context) {
-    //     c.HTML(http.StatusOK, "index.html", gin.H{
-    //         "title": "Main website",
-    //     })
-    // })
+    router.StaticFile("/bootstrap/css/bootstrap.min.css","./bower_components/bootstrap/dist/css/bootstrap.min.css")
+    router.StaticFile("/bootstrap/css/bootstrap.min.css.map","./bower_components/bootstrap/dist/css/bootstrap.min.css.map")
+    router.StaticFile("/bootstrap/css/bootstrap-theme.min.css","./bower_components/bootstrap/dist/css/bootstrap-theme.min.css")
+    router.StaticFile("/bootstrap/css/bootstrap-theme.min.css.map","./bower_components/bootstrap/dist/css/bootstrap-theme.min.css.map")
+    router.StaticFile("/bootstrap/css/signin.css","./bower_components/bootstrap/dist/css/signin.css")
+    router.LoadHTMLFiles("templates/dashboard.html")
+    router.LoadHTMLFiles("templates/welcome.html")
+
+    view := router.Group("view")
+    {
+        view.GET("/welcome", Welcome)
+        //view.GET("/dashboard", Dashboard)
+    }
 
     /* api */
     v1 := router.Group("api/v1")
@@ -100,6 +104,16 @@ func main() {
     }
 
     router.Run(":8080")
+}
+
+func Welcome(c *gin.Context) {
+    c.HTML(http.StatusOK, "welcome.html", gin.H{
+    })
+}
+
+func Dashboard(c *gin.Context) {
+    c.HTML(http.StatusOK, "dashboard.html", gin.H{
+    })
 }
 
 type LoginForm struct {
@@ -116,6 +130,7 @@ func Login(c *gin.Context) {
 
     var loginData LoginForm
     c.Bind(&loginData)
+    c.JSON(200, gin.H{"acc":loginData.Account,"ps":loginData.Passwd})
     if loginData.Account != "" && loginData.Passwd != "" {
         var user Users
         db.Where("account = ? AND passwd = ?",loginData.Account , loginData.Passwd).First(&user)
@@ -135,7 +150,6 @@ func CreateUser(c *gin.Context) {
     var user Users
 
     c.Bind(&user)
-    c.JSON(200, gin.H{"account":user.Account,"passwd":user.Passwd})
     if user.Account != "" && user.Passwd != "" && user.Name != "" {
         db.Create(&user)
         c.JSON(201, gin.H{"success": user})
