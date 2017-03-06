@@ -7,24 +7,46 @@
     <link rel="stylesheet" type="text/css" href="/bootstrap/css/bootstrap.min.css">
     <link rel="stylesheet" type="text/css" href="/bootstrap/css/bootstrap-theme.min.css">
     <link rel="stylesheet" type="text/css" href="/bootstrap/css/signin.css">
+    <script src="/js/vue/vue.min.js"></script>
+    <script src="/js/vue-resource/vue-resource.min.js"></script>
     <title>welcome Bookmarker</title>
   </head>
   <body>
-      <div class="container">
+      <div class="container" id="app">
           <p style="font-size:75px;text-align:center">Bookmarker</p>
           <h5 style="text-align:center">Records your learning process.</p>
-          <form class="form-signin" action="dashboard" method="post">
+          <div class="form-signin">
               <h2 class="form-signin-heading">Please sign in</h2>
               <label for="account" class="sr-only">Account</label>
-              <input type="text" id="account" name="account" class="form-control" placeholder="Account">
+              <input v-model="account" type="text" id="account" name="account" class="form-control" placeholder="Account">
               <label for="passwd" class="sr-only">Password</label>
-              <input type="password" id="passwd" name="passwd" class="form-control" placeholder="Password">
-              <button class="btn btn-lg btn-primary btn-block" type="submit">Sign in</button>
-          </form>
+              <input v-model="passwd" type="password" id="passwd" name="passwd" class="form-control" placeholder="Password">
+              <button class="btn btn-lg btn-primary btn-block" v-on:click="login">Sign in</button>
+          </div>
 
       </div>
-  </nav>
   </body>
   <script type="text/javascript">
+        Vue.http.options.emulateJSON = true;
+        var app = new Vue({
+            el:'#app',
+            data:{
+                account : "",
+                passwd : ""
+            },
+            methods: {
+                login: function(){
+                    var vm = this
+                    vm.$http.post('/api/v1/login',{"account":this.account,"passwd":this.passwd})
+                    .then((response) => {
+                            sessionStorage.setItem("token", response.data["token"])
+                            location.href = '/view/dashboard';
+                        }, (response) => {
+                            alert(response)
+                        })
+                }
+            }
+
+        })
   </script>
 </html>

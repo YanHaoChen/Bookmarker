@@ -26,16 +26,13 @@ type Books struct {
     Pages  int `gorm:"not null" form:"pages" json:"pages"`
     Records []BookRecords `gorm:"AssociationForeignKey:BookID" form:"records" json:"records"`
     Description string `form:"description" json:"description"`
-
 }
-
 type BookRecords struct {
     gorm.Model
     BookID int
     Pages int `gorm:"not null" form:"pages" json:"pages"`
     Note string `form:"note" json:"note"`
 }
-
 type LoginForm struct {
     Account     string `form:"account" json:"account"`
     Passwd string `form:"passwd" json:"passwd"`
@@ -81,6 +78,7 @@ func Cors() gin.HandlerFunc {
         c.Next()
     }
 }
+
 var router *gin.Engine
 var loginToken map[string]string
 
@@ -88,59 +86,42 @@ func main() {
     router = gin.Default()
     router.Use(Cors())
     loginToken = make(map[string]string)
-    /* view */
+
+    /* bootstrap */
     router.StaticFile("/bootstrap/css/bootstrap.min.css","./bower_components/bootstrap/dist/css/bootstrap.min.css")
     router.StaticFile("/bootstrap/css/bootstrap.min.css.map","./bower_components/bootstrap/dist/css/bootstrap.min.css.map")
     router.StaticFile("/bootstrap/css/bootstrap-theme.min.css","./bower_components/bootstrap/dist/css/bootstrap-theme.min.css")
     router.StaticFile("/bootstrap/css/bootstrap-theme.min.css.map","./bower_components/bootstrap/dist/css/bootstrap-theme.min.css.map")
     router.StaticFile("/bootstrap/css/signin.css","./bower_components/bootstrap/dist/css/signin.css")
-    router.LoadHTMLFiles("templates/dashboard.html")
+    /* js */
+    router.StaticFile("/js/vue/vue.min.js","./bower_components/vue/dist/vue.min.js")
+    router.StaticFile("/js/vue-resource/vue-resource.min.js","./bower_components/vue-resource/dist/vue-resource.min.js")
 
-
+    /* view */
     view := router.Group("view")
     {
         view.GET("/welcome", Welcome)
-        view.POST("/dashboard", Dashboard)
+        view.GET("/dashboard", Dashboard)
     }
-
     /* api */
     v1 := router.Group("api/v1")
     {
         v1.POST("/login",Login)
         v1.POST("/users/create", CreateUser)
     }
-
     router.Run(":8080")
 }
 
 func Welcome(c *gin.Context) {
     router.LoadHTMLFiles("templates/welcome.html")
-
     c.HTML(http.StatusOK, "welcome.html", gin.H{
     })
 }
 
 func Dashboard(c *gin.Context) {
-    db := InitDb()
-    defer db.Close()
-
-    var loginData LoginForm
-    c.Bind(&loginData)
-    if loginData.Account != "" && loginData.Passwd != "" {
-        var user Users
-        db.Where("account = ? AND passwd = ?",loginData.Account , loginData.Passwd).First(&user)
-        if user.Account != "" {
-            token := randToken()
-            loginToken[token] = user.Account
-            router.LoadHTMLFiles("templates/dashboard.html")
-            c.HTML(http.StatusOK, "dashboard.html", gin.H{
-                "token":token,
-            })
-        } else {
-            c.JSON(404, gin.H{"status":"Not Found."})
-        }
-    }
-
+    router.LoadHTMLFiles("templates/dashboard.html")
+    c.HTML(http.StatusOK, "dashboard.html", gin.H{
+    })
 }
 
 
