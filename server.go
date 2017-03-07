@@ -93,10 +93,12 @@ func main() {
     router.StaticFile("/bootstrap/css/bootstrap-theme.min.css","./bower_components/bootstrap/dist/css/bootstrap-theme.min.css")
     router.StaticFile("/bootstrap/css/bootstrap-theme.min.css.map","./bower_components/bootstrap/dist/css/bootstrap-theme.min.css.map")
     router.StaticFile("/bootstrap/css/signin.css","./bower_components/bootstrap/dist/css/signin.css")
+    router.StaticFile("/bootstrap/css/dashboard.css","./bower_components/bootstrap/dist/css/dashboard.css")
+
     /* js */
     router.StaticFile("/js/vue/vue.min.js","./bower_components/vue/dist/vue.min.js")
     router.StaticFile("/js/vue-resource/vue-resource.min.js","./bower_components/vue-resource/dist/vue-resource.min.js")
-
+    router.StaticFile("/js/jsSHA/sha.js","./bower_components/jsSHA/src/sha.js")
     /* view */
     view := router.Group("view")
     {
