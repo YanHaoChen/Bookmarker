@@ -16,26 +16,22 @@ type Users struct {
     Passwd  string `gorm:"not null" form:"passwd" json:"passwd"`
     Name string `gorm:"not null" form:"name" json:"name"`
     Email string `gorm:"not null" form:"email" json:"email"`
-    Books []Books `gorm:"AssociationForeignKey:UserID" form:"books" json:"books"`
+    Books []Books `gorm:"ForeignKey:ID;AssociationForeignKey:UserID" form:"books" json:"books"`
 }
 type Books struct {
     gorm.Model
-    UserID int `form:"userID" json:"userID"`
+    UserID uint `form:"userID" json:"userID"`
     Name string `gorm:"not null" form:"name" json:"name"`
     Category string `gorm:"not null" form:"category" json:"category"`
     Pages  int `gorm:"not null" form:"pages" json:"pages"`
-    Records []BookRecords `gorm:"AssociationForeignKey:BookID" form:"records" json:"records"`
-    Description string `form:"description" json:"description"`
+    Records []BookRecords `gorm:"ForeignKey:ID;AssociationForeignKey:BookID" form:"records" json:"records"`
+    Description string `gorm:"default:''" form:"description" json:"description"`
 }
 type BookRecords struct {
     gorm.Model
-    BookID int
+    BookID uint
     Pages int `gorm:"not null" form:"pages" json:"pages"`
-    Note string `form:"note" json:"note"`
-}
-type LoginForm struct {
-    Account     string `form:"account" json:"account"`
-    Passwd string `form:"passwd" json:"passwd"`
+    Note string `gorm:"default:''" form:"note" json:"note"`
 }
 
 func InitDb() *gorm.DB {
@@ -60,12 +56,6 @@ func InitDb() *gorm.DB {
     return db
 }
 
-func checkErr(err error) {
-    if err != nil {
-        panic(err)
-    }
-}
-
 func randToken() string {
 	b := make([]byte, 15)
 	rand.Read(b)
@@ -80,12 +70,12 @@ func Cors() gin.HandlerFunc {
 }
 
 var router *gin.Engine
-var loginToken map[string]string
+var loginToken map[string]uint
 
 func main() {
     router = gin.Default()
     router.Use(Cors())
-    loginToken = make(map[string]string)
+    loginToken = make(map[string]uint)
 
     /* bootstrap */
     router.StaticFile("/bootstrap/css/bootstrap.min.css","./bower_components/bootstrap/dist/css/bootstrap.min.css")
@@ -108,8 +98,14 @@ func main() {
     /* api */
     v1 := router.Group("api/v1")
     {
+        /* user */
         v1.POST("/login",Login)
+        v1.POST("/logout", Logout)
         v1.POST("/users/create", CreateUser)
+        // delete
+
+        /* book */
+        v1.POST("books/create", CreateBook)
     }
     router.Run(":8080")
 }
@@ -126,6 +122,10 @@ func Dashboard(c *gin.Context) {
     })
 }
 
+type LoginForm struct {
+    Account     string `form:"account" json:"account"`
+    Passwd string `form:"passwd" json:"passwd"`
+}
 
 func Login(c *gin.Context) {
     db := InitDb()
@@ -138,12 +138,23 @@ func Login(c *gin.Context) {
         db.Where("account = ? AND passwd = ?",loginData.Account , loginData.Passwd).First(&user)
         if user.Account != "" {
             token := randToken()
-            loginToken[token] = user.Account
+            loginToken[token] = user.ID
             c.JSON(200, gin.H{"token":token})
         } else {
             c.JSON(404, gin.H{"status":"Not Found."})
         }
     }
+}
+
+type Token struct {
+     Value string `form:"token" json:"token"`
+}
+
+func Logout(c *gin.Context) {
+    var token Token
+    c.Bind(&token)
+    delete(loginToken, token.Value)
+    c.JSON(200, gin.H{"status":"clear"})
 }
 
 func CreateUser(c *gin.Context) {
@@ -153,9 +164,50 @@ func CreateUser(c *gin.Context) {
 
     c.Bind(&user)
     if user.Account != "" && user.Passwd != "" && user.Name != "" && user.Email != "" {
-        db.Create(&user)
-        c.JSON(201, gin.H{"success": user})
+        if err := db.Create(&user).Error; err != nil {
+            c.JSON(422, gin.H{"error":"There are some things wrong."})
+        } else {
+            c.JSON(201, gin.H{"success": user})
+        }
     } else {
-        c.JSON(422, gin.H{"error": "There are some empty fields ."})
+        c.JSON(422, gin.H{"error": "There are some empty fields."})
+    }
+}
+
+type CreateBookValues struct {
+     Token string `form:"token" json:"token"`
+     Name string `form:"name" json:"name"`
+     Category string `form:"category" json:"category"`
+     Pages  int `form:"pages" json:"pages"`
+     Description string `form:"description" json:"description"`
+}
+
+func CreateBook(c *gin.Context)  {
+    var createBookValues CreateBookValues
+    c.Bind(&createBookValues)
+
+    userID, exist := loginToken[createBookValues.Token]
+
+    if exist == false {
+        c.JSON(403, gin.H{"error":"No permission."})
+        return
+    }
+
+    if createBookValues.Name != "" && createBookValues.Category != "" && createBookValues.Category != "" {
+        db := InitDb()
+        defer db.Close()
+        var book Books
+        book.Name = createBookValues.Name
+        book.UserID = userID
+        book.Category = createBookValues.Category
+        book.Pages = createBookValues.Pages
+        book.Description = createBookValues.Description
+        if err := db.Create(&book).Error; err != nil {
+            c.JSON(422, gin.H{"error":"There are some things wrong."})
+        } else {
+            c.JSON(201, gin.H{"status":"created"})
+        }
+    } else {
+        c.JSON(422, gin.H{"error":"There are some empty fields."})
     }
 }
