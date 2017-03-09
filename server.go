@@ -12,24 +12,24 @@ import (
 
 type Users struct {
     gorm.Model
-    Account string `gorm:"primary_key" form:"account" json:"account"`
+    Account string `gorm:";unique" form:"account" json:"account"`
     Passwd  string `gorm:"not null" form:"passwd" json:"passwd"`
     Name string `gorm:"not null" form:"name" json:"name"`
     Email string `gorm:"not null" form:"email" json:"email"`
-    Books []Books `gorm:"ForeignKey:ID;AssociationForeignKey:UserID" form:"books" json:"books"`
+    Books []Books `gorm:"ForeignKey:UserID" form:"books" json:"books"`
 }
 type Books struct {
     gorm.Model
     UserID uint `form:"userID" json:"userID"`
-    Name string `gorm:"not null" form:"name" json:"name"`
+    Name string `gorm:"not null;unique" form:"name" json:"name"`
     Category string `gorm:"not null" form:"category" json:"category"`
     Pages  int `gorm:"not null" form:"pages" json:"pages"`
-    Records []BookRecords `gorm:"ForeignKey:ID;AssociationForeignKey:BookID" form:"records" json:"records"`
+    Records []BookRecords `gorm:"ForeignKey:BookID" form:"records" json:"records"`
     Description string `gorm:"default:''" form:"description" json:"description"`
 }
 type BookRecords struct {
     gorm.Model
-    BookID uint
+    BookID uint `gorm:"not null" form:"bookID" json:"bookID"`
     Pages int `gorm:"not null" form:"pages" json:"pages"`
     Note string `gorm:"default:''" form:"note" json:"note"`
 }
@@ -73,6 +73,8 @@ var router *gin.Engine
 var loginToken map[string]uint
 
 func main() {
+    db := InitDb()
+    defer db.Close()
     router = gin.Default()
     router.Use(Cors())
     loginToken = make(map[string]uint)
@@ -83,10 +85,12 @@ func main() {
     router.StaticFile("/bootstrap/css/bootstrap-theme.min.css","./bower_components/bootstrap/dist/css/bootstrap-theme.min.css")
     router.StaticFile("/bootstrap/css/bootstrap-theme.min.css.map","./bower_components/bootstrap/dist/css/bootstrap-theme.min.css.map")
     router.StaticFile("/bootstrap/css/signin.css","./bower_components/bootstrap/dist/css/signin.css")
+    router.StaticFile("/bootstrap/css/dashboard.css","./bower_components/bootstrap/dist/css/dashboard.css")
+
     /* js */
     router.StaticFile("/js/vue/vue.min.js","./bower_components/vue/dist/vue.min.js")
     router.StaticFile("/js/vue-resource/vue-resource.min.js","./bower_components/vue-resource/dist/vue-resource.min.js")
-
+    router.StaticFile("/js/jsSHA/sha.js","./bower_components/jsSHA/src/sha.js")
     /* view */
     view := router.Group("view")
     {
@@ -97,13 +101,20 @@ func main() {
     v1 := router.Group("api/v1")
     {
         /* user */
+        /* account:string passwd:string */
         v1.POST("/login",Login)
+        /* token:string */
         v1.POST("/logout", Logout)
+        /* Account:string passwd:string name:string email:string */
         v1.POST("/users/create", CreateUser)
-        // delete
+        /* token:string */
+        v1.GET("/users/info", UserInfo)
 
         /* book */
-        v1.POST("books/create", CreateBook)
+        /* token:string name:string Category:string pages:int Description:string */
+        v1.POST("/books/create", CreateBook)
+        /* token:string */
+        v1.GET("/books/infos", BookInfos)
     }
     router.Run(":8080")
 }
@@ -172,6 +183,24 @@ func CreateUser(c *gin.Context) {
     }
 }
 
+func UserInfo(c *gin.Context) {
+    var token Token
+    c.Bind(&token)
+    userID, exist := loginToken[token.Value]
+    if exist == false {
+        c.JSON(403, gin.H{"error":"No permission."})
+        return
+    }
+    db :=InitDb()
+    defer db.Close()
+    var user Users
+    if err := db.Table("users").Where("id = ?",userID).First(&user).Error; err != nil {
+        c.JSON(422, gin.H{"error":"There are some things wrong."})
+    } else {
+        c.JSON(201, gin.H{"account":user.Account, "name":user.Name, "email":user.Email})
+    }
+}
+
 type CreateBookValues struct {
      Token string `form:"token" json:"token"`
      Name string `form:"name" json:"name"`
@@ -191,21 +220,48 @@ func CreateBook(c *gin.Context)  {
         return
     }
 
-    if createBookValues.Name != "" && createBookValues.Category != "" && createBookValues.Category != "" {
+    if createBookValues.Name != "" && createBookValues.Category != "" && createBookValues.Pages > 0 {
         db := InitDb()
         defer db.Close()
-        var book Books
-        book.Name = createBookValues.Name
-        book.UserID = userID
-        book.Category = createBookValues.Category
-        book.Pages = createBookValues.Pages
-        book.Description = createBookValues.Description
-        if err := db.Create(&book).Error; err != nil {
-            c.JSON(422, gin.H{"error":"There are some things wrong."})
+        book := Books{
+            Name : createBookValues.Name,
+            Category : createBookValues.Category,
+            Pages : createBookValues.Pages,
+            Description : createBookValues.Description,
+        }
+
+        var user Users
+        if err := db.Table("users").Where("id = ?",userID).First(&user).Error; err != nil {
+            c.JSON(422, gin.H{"error":"Not found the user."})
         } else {
-            c.JSON(201, gin.H{"status":"created"})
+            if err := db.Model(&user).Association("Books").Append(&book).Error; err != nil {
+                c.JSON(422, gin.H{"error":"Can't append this book."})
+            } else {
+                c.JSON(201, gin.H{"status":"created"})
+            }
         }
     } else {
         c.JSON(422, gin.H{"error":"There are some empty fields."})
+    }
+}
+
+func BookInfos(c *gin.Context)  {
+    var token Token
+    c.Bind(&token)
+    userID, exist := loginToken[token.Value]
+    if exist == false {
+        c.JSON(403, gin.H{"error":"No permission."})
+        return
+    }
+    db :=InitDb()
+    defer db.Close()
+    var user Users
+    if err := db.Table("users").Where("id = ?",userID).First(&user).Error; err != nil {
+        c.JSON(422, gin.H{"error":"There are some things wrong."})
+    } else {
+        books :=[]Books{}
+
+        db.Model(&user).Related(&books, "Books")
+        c.JSON(201, gin.H{"books":books})
     }
 }
