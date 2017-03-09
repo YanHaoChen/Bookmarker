@@ -111,10 +111,12 @@ func main() {
         v1.GET("/users/info", UserInfo)
 
         /* book */
-        /* token:string name:string Category:string pages:int Description:string */
+        /* token:string name:string category:string pages:int description:string */
         v1.POST("/books/create", CreateBook)
         /* token:string */
         v1.GET("/books/infos", BookInfos)
+        /* token:string bookID:uint name:string category:string pages:int description:string */
+        v1.PUT("/books/update",UpdateBook)
     }
     router.Run(":8080")
 }
@@ -163,7 +165,7 @@ func Logout(c *gin.Context) {
     var token Token
     c.Bind(&token)
     delete(loginToken, token.Value)
-    c.JSON(200, gin.H{"status":"clear"})
+    c.JSON(200, gin.H{"status":"Clear"})
 }
 
 func CreateUser(c *gin.Context) {
@@ -237,7 +239,7 @@ func CreateBook(c *gin.Context)  {
             if err := db.Model(&user).Association("Books").Append(&book).Error; err != nil {
                 c.JSON(422, gin.H{"error":"Can't append this book."})
             } else {
-                c.JSON(201, gin.H{"status":"created"})
+                c.JSON(201, gin.H{"status":"Created"})
             }
         }
     } else {
@@ -260,8 +262,51 @@ func BookInfos(c *gin.Context)  {
         c.JSON(422, gin.H{"error":"There are some things wrong."})
     } else {
         books :=[]Books{}
-
         db.Model(&user).Related(&books, "Books")
+        for index , _ := range books {
+            db.Model(&books[index]).Related(&books[index].Records, "Records")
+        }
         c.JSON(201, gin.H{"books":books})
+
     }
+}
+
+type UpdateBookValues struct {
+    Token string `form:"token" json:"token"`
+    BookID uint `form:"bookID" json:"bookID"`
+    Name string `form:"name" json:"name"`
+    Category string `form:"category" json:"category"`
+    Pages  int `form:"pages" json:"pages"`
+    Description string `form:"description" json:"description"`
+}
+
+func UpdateBook(c *gin.Context)  {
+    updateBookValues := UpdateBookValues{}
+    c.Bind(&updateBookValues)
+
+    userID, exist := loginToken[updateBookValues.Token]
+
+    if exist == false {
+        c.JSON(403, gin.H{"error":"No permission."})
+        return
+    }
+    if updateBookValues.Name != "" && updateBookValues.Category != "" && updateBookValues.Pages > 0 {
+        db := InitDb()
+        defer db.Close()
+        book := Books{}
+        db.Table("books").Where("id = ? and user_id = ?",updateBookValues.BookID, userID).First(&book)
+        book.Name = updateBookValues.Name
+        book.Category = updateBookValues.Category
+        book.Pages = updateBookValues.Pages
+        book.Description = updateBookValues.Description
+
+        if err := db.Save(&book).Error; err != nil {
+            c.JSON(422, gin.H{"error":"Can't update."})
+        } else {
+            c.JSON(201, gin.H{"status":"Updated"})
+        }
+    } else {
+        c.JSON(422, gin.H{"error":"Can't find this book."})
+    }
+
 }
