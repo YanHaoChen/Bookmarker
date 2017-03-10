@@ -452,6 +452,18 @@ func CreateBookRecord(c *gin.Context) {
         if err := db.Table("books").Where("user_id=? and id =?",userID, createBookRecordParams.BookID).First(&book).Error; err != nil {
             c.JSON(422, gin.H{"error":"Can't find this book."})
         } else {
+
+            db.Model(&book).Related(&book.Records, "Records")
+
+            read := 0
+
+            for _, record := range book.Records {
+                read += record.Pages
+            }
+            if read + createBookRecordParams.Pages > book.Pages {
+                c.JSON(422, gin.H{"error":"Over pages of this book."})
+                return
+            }
             bookRecord := BookRecords {
                 Pages: createBookRecordParams.Pages,
                 Note: createBookRecordParams.Note,
