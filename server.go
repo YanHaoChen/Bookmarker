@@ -373,24 +373,36 @@ type UpdateBookParams struct {
 }
 
 func UpdateBook(c *gin.Context)  {
-    UpdateBookParams := UpdateBookParams{}
-    c.Bind(&UpdateBookParams)
+    updateBookParams := UpdateBookParams{}
+    c.Bind(&updateBookParams)
 
-    userID, exist := loginToken[UpdateBookParams.Token]
+    userID, exist := loginToken[updateBookParams.Token]
 
     if exist == false {
         c.JSON(403, gin.H{"error":"No permission."})
         return
     }
-    if UpdateBookParams.Name != "" && UpdateBookParams.Category != "" && UpdateBookParams.Pages > 0 {
+    if updateBookParams.Name != "" && updateBookParams.Category != "" && updateBookParams.Pages > 0 {
         db := InitDb()
         defer db.Close()
         book := Books{}
-        db.Table("books").Where("id = ? and user_id = ?",UpdateBookParams.BookID, userID).First(&book)
-        book.Name = UpdateBookParams.Name
-        book.Category = UpdateBookParams.Category
-        book.Pages = UpdateBookParams.Pages
-        book.Description = UpdateBookParams.Description
+        db.Table("books").Where("id = ? and user_id = ?",updateBookParams.BookID, userID).First(&book)
+        db.Model(&book).Related(&book.Records, "Records")
+        read := 0
+
+        for _, record := range book.Records {
+            read += record.Pages
+        }
+
+        if updateBookParams.Pages < read {
+            c.JSON(422, gin.H{"error":" Pages of This book has been read over the set of pages."})
+            return
+        }
+
+        book.Name = updateBookParams.Name
+        book.Category = updateBookParams.Category
+        book.Pages = updateBookParams.Pages
+        book.Description = updateBookParams.Description
 
         if err := db.Save(&book).Error; err != nil {
             c.JSON(422, gin.H{"error":"Can't update."})
