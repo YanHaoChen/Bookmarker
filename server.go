@@ -21,7 +21,7 @@ type Users struct {
 type Books struct {
     gorm.Model
     UserID uint `form:"userID" json:"userID"`
-    Name string `gorm:"not null;unique" form:"name" json:"name"`
+    Name string `gorm:"not null" form:"name" json:"name"`
     Category string `gorm:"not null" form:"category" json:"category"`
     Pages  int `gorm:"not null" form:"pages" json:"pages"`
     Records []BookRecords `gorm:"ForeignKey:BookID" form:"records" json:"records"`
@@ -109,6 +109,11 @@ func main() {
         v1.POST("/users/create", CreateUser)
         /* token:string */
         v1.GET("/users/info", UserInfo)
+        /* token:string name:string email:string */
+        v1.PUT("/users/update",UpdateUser)
+        /* token:string expasswd:string newpasswd:string */
+        v1.PUT("/users/updatepasswd",UpdateUserPasswd)
+
 
         /* book */
         /* token:string name:string category:string pages:int description:string */
@@ -117,6 +122,14 @@ func main() {
         v1.GET("/books/infos", BookInfos)
         /* token:string bookID:uint name:string category:string pages:int description:string */
         v1.PUT("/books/update",UpdateBook)
+        /* token:string bookID:uint */
+        v1.DELETE("/books/delete",DeleteBook)
+
+        /* BookRecord */
+        /* token:string bookID:string pages:int note:string */
+        v1.POST("/bookrecords/create",CreateBookRecord)
+
+
     }
     router.Run(":8080")
 }
@@ -162,7 +175,7 @@ type Token struct {
 }
 
 func Logout(c *gin.Context) {
-    var token Token
+    token := Token{}
     c.Bind(&token)
     delete(loginToken, token.Value)
     c.JSON(200, gin.H{"status":"Clear"})
@@ -171,7 +184,7 @@ func Logout(c *gin.Context) {
 func CreateUser(c *gin.Context) {
     db := InitDb()
     defer db.Close()
-    var user Users
+    user := Users{}
 
     c.Bind(&user)
     if user.Account != "" && user.Passwd != "" && user.Name != "" && user.Email != "" {
@@ -186,7 +199,7 @@ func CreateUser(c *gin.Context) {
 }
 
 func UserInfo(c *gin.Context) {
-    var token Token
+    token := Token{}
     c.Bind(&token)
     userID, exist := loginToken[token.Value]
     if exist == false {
@@ -203,7 +216,86 @@ func UserInfo(c *gin.Context) {
     }
 }
 
-type CreateBookValues struct {
+type UpdateUserParams struct {
+    Token string `form:"token" json:"token"`
+    Name string `form:"name" json:"name"`
+    Email string `form:"email" json:"email"`
+}
+
+func UpdateUser(c *gin.Context) {
+    updateUserParams := UpdateUserParams{}
+    c.Bind(&updateUserParams)
+    userID, exist := loginToken[updateUserParams.Token]
+    if exist == false {
+        c.JSON(403, gin.H{"error":"No permission."})
+        return
+    }
+
+    if updateUserParams.Name != "" && updateUserParams.Email != "" {
+        db :=InitDb()
+        defer db.Close()
+        user := Users{}
+        if err := db.Table("users").Where("id = ?",userID).First(&user).Error; err != nil {
+            c.JSON(422, gin.H{"error":"There are some things wrong."})
+        } else {
+            if user.Account != "" {
+                user.Name = updateUserParams.Name
+                user.Email = updateUserParams.Email
+                if err := db.Save(&user).Error; err != nil {
+                    c.JSON(422, gin.H{"error":"Can't update this user."})
+                } else {
+                    c.JSON(201, gin.H{"status":"Update"})
+                }
+            } else {
+                c.JSON(422, gin.H{"error":"Can't find this user."})
+            }
+        }
+    } else {
+        c.JSON(422, gin.H{"error":"There are some empty fields."})
+    }
+}
+
+type UpdateUserPasswdParams struct {
+    Token string `form:"token" json:"token"`
+    Expasswd string `form:"expasswd" json:"expasswd"`
+    Newpasswd string `form:"newpasswd" json:"newpasswd"`
+}
+
+func UpdateUserPasswd(c *gin.Context)  {
+    upadateUserPasswdParams := UpdateUserPasswdParams{}
+    c.Bind(&upadateUserPasswdParams)
+
+    userID, exist := loginToken[upadateUserPasswdParams.Token]
+
+    if exist == false {
+        c.JSON(403, gin.H{"error":"No permission."})
+        return
+    }
+    if upadateUserPasswdParams.Expasswd != "" && upadateUserPasswdParams.Newpasswd != "" {
+        db :=InitDb()
+        defer db.Close()
+        user := Users{}
+        if err := db.Table("users").Where("id = ? and passwd = ?",userID, upadateUserPasswdParams.Expasswd).First(&user).Error; err != nil {
+            c.JSON(422, gin.H{"error":"There are some things wrong."})
+        } else {
+            if user.Account != "" {
+                user.Passwd = upadateUserPasswdParams.Newpasswd
+                if err := db.Save(&user).Error; err != nil {
+                    c.JSON(422, gin.H{"error":"Can't update this user."})
+                } else {
+                    c.JSON(201, gin.H{"status":"Update"})
+                }
+            } else {
+                c.JSON(422, gin.H{"error":"Can't find this user."})
+            }
+        }
+    } else {
+        c.JSON(422, gin.H{"error":"There are some empty fields."})
+    }
+
+}
+
+type CreateBookParams struct {
      Token string `form:"token" json:"token"`
      Name string `form:"name" json:"name"`
      Category string `form:"category" json:"category"`
@@ -212,24 +304,24 @@ type CreateBookValues struct {
 }
 
 func CreateBook(c *gin.Context)  {
-    var createBookValues CreateBookValues
-    c.Bind(&createBookValues)
+    var CreateBookParams CreateBookParams
+    c.Bind(&CreateBookParams)
 
-    userID, exist := loginToken[createBookValues.Token]
+    userID, exist := loginToken[CreateBookParams.Token]
 
     if exist == false {
         c.JSON(403, gin.H{"error":"No permission."})
         return
     }
 
-    if createBookValues.Name != "" && createBookValues.Category != "" && createBookValues.Pages > 0 {
+    if CreateBookParams.Name != "" && CreateBookParams.Category != "" && CreateBookParams.Pages > 0 {
         db := InitDb()
         defer db.Close()
         book := Books{
-            Name : createBookValues.Name,
-            Category : createBookValues.Category,
-            Pages : createBookValues.Pages,
-            Description : createBookValues.Description,
+            Name : CreateBookParams.Name,
+            Category : CreateBookParams.Category,
+            Pages : CreateBookParams.Pages,
+            Description : CreateBookParams.Description,
         }
 
         var user Users
@@ -271,7 +363,7 @@ func BookInfos(c *gin.Context)  {
     }
 }
 
-type UpdateBookValues struct {
+type UpdateBookParams struct {
     Token string `form:"token" json:"token"`
     BookID uint `form:"bookID" json:"bookID"`
     Name string `form:"name" json:"name"`
@@ -281,24 +373,24 @@ type UpdateBookValues struct {
 }
 
 func UpdateBook(c *gin.Context)  {
-    updateBookValues := UpdateBookValues{}
-    c.Bind(&updateBookValues)
+    UpdateBookParams := UpdateBookParams{}
+    c.Bind(&UpdateBookParams)
 
-    userID, exist := loginToken[updateBookValues.Token]
+    userID, exist := loginToken[UpdateBookParams.Token]
 
     if exist == false {
         c.JSON(403, gin.H{"error":"No permission."})
         return
     }
-    if updateBookValues.Name != "" && updateBookValues.Category != "" && updateBookValues.Pages > 0 {
+    if UpdateBookParams.Name != "" && UpdateBookParams.Category != "" && UpdateBookParams.Pages > 0 {
         db := InitDb()
         defer db.Close()
         book := Books{}
-        db.Table("books").Where("id = ? and user_id = ?",updateBookValues.BookID, userID).First(&book)
-        book.Name = updateBookValues.Name
-        book.Category = updateBookValues.Category
-        book.Pages = updateBookValues.Pages
-        book.Description = updateBookValues.Description
+        db.Table("books").Where("id = ? and user_id = ?",UpdateBookParams.BookID, userID).First(&book)
+        book.Name = UpdateBookParams.Name
+        book.Category = UpdateBookParams.Category
+        book.Pages = UpdateBookParams.Pages
+        book.Description = UpdateBookParams.Description
 
         if err := db.Save(&book).Error; err != nil {
             c.JSON(422, gin.H{"error":"Can't update."})
@@ -309,4 +401,68 @@ func UpdateBook(c *gin.Context)  {
         c.JSON(422, gin.H{"error":"Can't find this book."})
     }
 
+}
+type DeleteBookParams struct {
+    Token string `form:"token" json:"token"`
+    BookID string `form:"bookID" json:"bookID"`
+}
+
+func DeleteBook(c *gin.Context)  {
+    deleteBookParams := DeleteBookParams{}
+    c.Bind(&deleteBookParams)
+    userID, exist := loginToken[deleteBookParams.Token]
+    if exist == false {
+        c.JSON(403, gin.H{"error":"No permission."})
+        return
+    }
+    if deleteBookParams.BookID != "" {
+        db := InitDb()
+        defer db.Close()
+        if err := db.Table("books").Where("user_id=? and id=?",userID , deleteBookParams.BookID).Delete(&Books{}).Error; err != nil {
+            c.JSON(422, gin.H{"error":"Can't find this book."})
+        } else {
+            db.Table("book_records").Where("book_id=?",deleteBookParams.BookID).Delete(&Books{})
+            c.JSON(201, gin.H{"status": "Delete"})
+        }
+    } else {
+        c.JSON(422, gin.H{"error": "There are some empty fields."})
+    }
+}
+
+type CreateBookRecordParams struct {
+    Token string `form:"token" json:"token"`
+    BookID uint `form:"bookID" json:"bookID"`
+    Pages int `form:"pages" json:"pages"`
+    Note string `form:"note" json:"note"`
+}
+
+func CreateBookRecord(c *gin.Context) {
+    createBookRecordParams := CreateBookRecordParams{}
+    c.Bind(&createBookRecordParams)
+    userID, exist := loginToken[createBookRecordParams.Token]
+    if exist == false {
+        c.JSON(403, gin.H{"error":"No permission."})
+        return
+    }
+
+    if createBookRecordParams.BookID > 0 && createBookRecordParams.Pages >= 0 {
+        db := InitDb()
+        defer db.Close()
+        book := Books{}
+        if err := db.Table("books").Where("user_id=? and id =?",userID, createBookRecordParams.BookID).First(&book).Error; err != nil {
+            c.JSON(422, gin.H{"error":"Can't find this book."})
+        } else {
+            bookRecord := BookRecords {
+                Pages: createBookRecordParams.Pages,
+                Note: createBookRecordParams.Note,
+            }
+            if err := db.Model(&book).Association("Records").Append(&bookRecord).Error; err != nil {
+                c.JSON(422, gin.H{"error":"Can't append this BookRecord."})
+            } else {
+                c.JSON(201, gin.H{"status":"Created"})
+            }
+        }
+    } else {
+        c.JSON(422, gin.H{"error":"There are some empty fields."})
+    }
 }
