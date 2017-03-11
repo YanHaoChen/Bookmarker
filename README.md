@@ -15,7 +15,10 @@
 * 後端：gin（golang）
 * 版本控制：進一步熟悉 git 的分工操作
 
-### 目前進度：20%
+## Overview
+![Overview](https://github.com/YanHaoChen/Bookmarker/blob/master/img/overview.png?raw=true)
+
+## 目前進度：50%
 
 
 
