@@ -4,12 +4,12 @@
     <meta charset="utf-8">
     <meta http-equiv="X-UA-Compatible" content="IE=edge">
     <meta name="viewport" content="width=device-width, initial-scale=1">
-    <link rel="stylesheet" type="text/css" href="/bootstrap/css/bootstrap.min.css">
-    <link rel="stylesheet" type="text/css" href="/bootstrap/css/bootstrap-theme.min.css">
-    <link rel="stylesheet" type="text/css" href="/bootstrap/css/signin.css">
-    <script src="/js/vue/vue.min.js"></script>
-    <script src="/js/vue-resource/vue-resource.min.js"></script>
-    <script src="/js/jsSHA/sha.js"></script>
+    <link rel="stylesheet" type="text/css" href="../bower_components/bootstrap/dist/css/bootstrap.min.css">
+    <link rel="stylesheet" type="text/css" href="../bower_components/bootstrap/dist/css/bootstrap-theme.min.css">
+    <link rel="stylesheet" type="text/css" href="../bower_components/bootstrap/dist/css/signin.css">
+    <script src="../bower_components/vue/dist/vue.min.js"></script>
+    <script src="../bower_components/vue-resource/dist/vue-resource.min.js"></script>
+    <script src="../bower_components/jsSHA/src/sha.js"></script>
 
     <title>welcome Bookmarker</title>
     <style type="text/css">
@@ -61,11 +61,11 @@
                     var shaObj = new jsSHA("SHA-256", "TEXT");
                     shaObj.update(this.passwd);
                     var hash = shaObj.getHash("HEX");
-                    vm.$http.post('/api/v1/login',{"account":this.account,"passwd":hash})
+                    vm.$http.post('http://127.0.0.1:8080/api/v1/login',{"account":this.account,"passwd":hash})
                     .then((response) => {
                         if(response.data["token"]) {
                             sessionStorage.setItem("token", response.data["token"])
-                            location.href = '/view/dashboard';
+                            location.href = '/templates/dashboard.html';
                         } else {
                             alert("The user is not found.");
                         }

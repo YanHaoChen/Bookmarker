@@ -4,11 +4,11 @@
     <meta charset="utf-8">
     <meta http-equiv="X-UA-Compatible" content="IE=edge">
     <meta name="viewport" content="width=device-width, initial-scale=1">
-    <link rel="stylesheet" type="text/css" href="/bootstrap/css/bootstrap.min.css">
-    <link rel="stylesheet" type="text/css" href="/bootstrap/css/dashboard.css">
-    <script src="/js/vue/vue.min.js"></script>
-    <script src="/js/vue-resource/vue-resource.min.js"></script>
-    <script src="/js/jsSHA/sha.js"></script>
+    <link rel="stylesheet" type="text/css" href="../bower_components/bootstrap/dist/css/bootstrap.min.css">
+    <link rel="stylesheet" type="text/css" href="../bower_components/bootstrap/dist/css/dashboard.css">
+    <script src="../bower_components/vue/dist/vue.min.js"></script>
+    <script src="../bower_components/vue-resource/dist/vue-resource.min.js"></script>
+
     <style media="screen">
         .nav-sidebar > .active > a, .nav-sidebar > .active > a:hover, .nav-sidebar > .active > a:focus{
             background-color:#a94442
@@ -19,123 +19,178 @@
     </style>
     <title>Dashboard</title>
   </head>
-  <body v-on:load="auth" id="app">
-      <div class="navbar navbar-inverse navbar-fixed-top" style="background-color:#3c763d" role="navigation">
-          <div class="container-fluid">
-              <div class="navbar-header">
-                  <a class="navbar-brand" style="color:#ffffff;font-size:18px" >Bookmarker</a>
-              </div>
-              <div  id="navbar" class="navbar-collapse collapse">
-                  <ul class="nav navbar-nav navbar-right">
-                      <li>
-                          <a onclick="" style="color:#ffffff;font-size:16px">Hi! Sean</a>
-                      </li>
-                      <li>
-                          <a onclick="" style="color:#ffffff;font-size:16px">Sign out</a>
-                      </li>
-                      <li>
-                          <a></a>
-                      </li>
-                  </ul>
+  <body>
+      <div id="app">
+          <div  class="navbar navbar-inverse navbar-fixed-top" style="background-color:#3c763d" role="navigation">
+              <div class="container-fluid">
+                  <div class="navbar-header">
+                      <a class="navbar-brand" style="color:#ffffff;font-size:18px" >Bookmarker</a>
+                  </div>
+                  <div  id="navbar" class="navbar-collapse collapse">
+                      <ul class="nav navbar-nav navbar-right">
+                          <li>
+                              <a style="color:#ffffff;font-size:16px">Hi! {{username}} </a>
+                          </li>
+                          <li>
+                              <a href="#" v-on:click="signout" style="color:#ffffff;font-size:16px">Sign out</a>
+                          </li>
+                          <li>
+                              <a></a>
+                          </li>
+                      </ul>
+                  </div>
               </div>
           </div>
-      </div>
-      <div class="container-fluid">
-          <div class="row">
-            <div class="col-sm-3 col-md-2 sidebar">
-                  <ul class="nav nav-sidebar">
-                    <li class="active" >
-                        <a href="#">Overview</a>
-                    </li>
-                    <li>
-                        <a href="#">Books</a>
-                    </li>
-                </ul>
-            </div>
-            <div id="overview" v-if="overviewActive">
-                <div class="col-sm-9 col-sm-offset-3 col-md-10 col-md-offset-2 main">
-                    <div class="row">
-                        <div class="col-md-4">
-                            <p style="font-size:20px">Reading:</p>
-                            <p style="font-size:55px">23 <span style="font-size:20px">books.</span></p>
+          <div class="container-fluid">
+              <div class="row">
+                <div class="col-sm-3 col-md-2 sidebar">
+                      <ul class="nav nav-sidebar">
+                        <li v-bind:class="{ active: overviewActive }" >
+                            <a v-on:click="showOverview" href="#">Overview</a>
+                        </li>
+                        <li v-bind:class="{ active: booksviewActive }">
+                            <a  v-on:click="showBooksview" href="#">Books</a>
+                        </li>
+                    </ul>
+                </div>
+                <div id="overview" v-if="overviewActive">
+                    <div class="col-sm-9 col-sm-offset-3 col-md-10 col-md-offset-2 main">
+                        <div class="row">
+                            <div class="col-md-4">
+                                <p style="font-size:20px">Reading:</p>
+                                <p style="font-size:55px">{{overviewReadingBookCount}}<span style="font-size:20px"> books.</span></p>
+                            </div>
+                            <div class="col-md-4">
+                                <p style="font-size:20px">Have recorded:</p>
+                                <p style="font-size:55px">{{overviewBookRecordCount}}<span style="font-size:20px"> times.</span></p>
+                            </div>
+                            <div class="col-md-4">
+                                <p style="font-size:20px">Have read:</p>
+                                <p style="font-size:55px">{{overviewReadCount}}<span style="font-size:20px"> books.</span></p>
+                            </div>
                         </div>
-                        <div class="col-md-4">
-                            <p style="font-size:20px">Have recorded:</p>
-                            <p style="font-size:55px">45 <span style="font-size:20px">times.</span></p>
-                        </div>
-                        <div class="col-md-4">
-                            <p style="font-size:20px">Have read:</p>
-                            <p style="font-size:55px">30 <span style="font-size:20px">books.</span></p>
+                        <br/>
+                        <div id="category" v-for="category in overviewCategorys">
+                            <h1 class="page-header">{{category}}</h1>
+                            <div class="table-responsive">
+                                <table class="table table-striped">
+                                    <thead>
+                                        <tr>
+                                            <th width="5%">#</th>
+                                            <th width="25%">Name</th>
+                                            <th>Progress</th>
+                                            <th width="10%">Pages</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+
+                                        <tr v-for="(book, index) in overviewList[category]">
+                                            <td >{{index + 1}}</td>
+                                            <td>{{book.name}}</td>
+                                            <td>
+                                                <div class="progress">
+                                                    <div class="progress-bar progress-bar-success" role="progressbar" v-bind:style="{ width: (book.read / book.pages) * 100 + '%' }">{{(book.read / book.pages) * 100 }}%</div>
+                                                </div>
+                                            </td>
+                                            <td>{{book.read}}/{{book.pages}}</td>
+                                        </tr>
+                                    </tbody>
+                                </table>
+                            </div>
                         </div>
                     </div>
-                    <br/>
-                    <h1 class="page-header">統計學</h1>
-                    <div class="table-responsive">
-                        <table class="table table-striped">
-                            <thead>
-                                <tr>
-                                    <th width="5%">#</th>
-                                    <th width="25%">Name</th>
-                                    <th>Progress</th>
-                                    <th width="10%">Pages</th>
-                                </tr>
-                            </thead>
-                            <tbody>
-                                <tr>
-                                    <td >1</td>
-                                    <td>統計學</td>
-                                    <td>
-                                        <div class="progress">
-                                            <div class="progress-bar progress-bar-success" role="progressbar" aria-valuenow="60" aria-valuemin="0" aria-valuemax="100" style="width: 60%;">60%</div>
-                                        </div>
-                                    </td>
-                                    <td>6/10</td>
-                                </tr>
-                            </tbody>
-                        </table>
+                </div>
+                <div id="Booksview" v-if="booksviewActive">
+                    <div class="col-sm-9 col-sm-offset-3 col-md-10 col-md-offset-2 main">
+                        
                     </div>
                 </div>
             </div>
-        </div>
-    </div>
+          </div>
+      </div>
   </body>
   <script type="text/javascript">
 
   Vue.http.options.emulateJSON = true;
 
+  var count = 0;
   var app = new Vue({
-      el:"#app",
+      el:'#app',
       data:{
-          overviewActive: false,
-          bookActive: false,
+          username: "",
+          overviewActive: true,
+          booksviewActive: false,
+          overviewReadingBookCount: 0,
+          overviewBookRecordCount: 0,
+          overviewReadCount: 0,
+          overviewCategorys:[],
           overviewList:{}
       },
       created: function () {
           var vm = this
-          vm.$http.post("/api/v1/auth",{"token":sessionStorage["token"]}).then((response) => {
+          vm.$http.get("http://127.0.0.1:8080/api/v1/users/info?token="+sessionStorage["token"]).then((response) => {
+              this.username = response.data["name"];
               vm.getBooks();
           },(response) => {
               sessionStorage.clear();
-              location.href = '/view/welcome';
+              location.href = '/templates/welcome.html';
           })
       },
       methods:{
           getBooks: function () {
               var vm = this
-              vm.$http.get("/api/v1/books/infos?token=" + sessionStorage["token"]).then((response) => {
-                  var books = response.data["books"]
+
+              readingBookCount = 0;
+              bookRecordCount = 0;
+              readCount = 0;
+              vm.$http.get("http://127.0.0.1:8080/api/v1/books/infos?token=" + sessionStorage["token"]).then((response) => {
+                  var books = response.data["books"];
                   for(i=0; i < books.length; i++){
-                      if (typeof this.overviewList[books[i].category] !== 'undefined'){
-                          this.overviewList[books[i].category].append(books[i]);
+                      var read = 0;
+                      for(j=0;j<books[i].records.length;j++) {
+                           bookRecordCount++;
+                          read += books[i].records[j].pages
+                      }
+                      books[i]["read"] = read;
+
+                      if (read < books[i].pages){
+                          readingBookCount++;
                       } else {
-                          this.overviewList[books[i].category] = [books[i]];
+                          readCount++;
+                      }
+                      if (typeof this.overviewList[books[i].category] !== 'undefined'){
+                          vm.overviewList[books[i].category].push(books[i]);
+                      } else {
+                          vm.overviewList[books[i].category] = [books[i]];
                       }
                   }
+
+                  var keys = [];
+                  for (var key in vm.overviewList) {
+                      keys.push(key);
+                  }
+                  vm.overviewReadingBookCount = readingBookCount;
+                  vm.overviewBookRecordCount = bookRecordCount;
+                  vm.overviewReadCount = readCount;
+                  vm.overviewCategorys = keys;
               },(response) => {
                   sessionStorage.clear();
-                  location.href = '/view/welcome';
+                  location.href = '/templates/welcome.html';
               })
+          },
+          signout: function () {
+              sessionStorage.clear();
+              location.href = '/templates/welcome.html';
+          },
+          showOverview : function () {
+              this.overviewActive = true;
+              this.booksviewActive = false;
+          },
+          showBooksview : function () {
+              this.overviewActive = false;
+              this.booksviewActive = true;
           }
+
       }
   })
   </script>
