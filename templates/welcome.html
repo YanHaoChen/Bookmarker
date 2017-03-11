@@ -58,7 +58,7 @@
             methods: {
                 login: function(){
                     var vm = this
-                    var shaObj = new jsSHA("SHA-1", "TEXT");
+                    var shaObj = new jsSHA("SHA-256", "TEXT");
                     shaObj.update(this.passwd);
                     var hash = shaObj.getHash("HEX");
                     vm.$http.post('/api/v1/login',{"account":this.account,"passwd":hash})
