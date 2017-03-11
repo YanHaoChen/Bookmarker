@@ -104,6 +104,8 @@ func main() {
         /* account:string passwd:string */
         v1.POST("/login",Login)
         /* token:string */
+        v1.POST("/auth", Auth)
+        /* token:string */
         v1.POST("/logout", Logout)
         /* Account:string passwd:string name:string email:string */
         v1.POST("/users/create", CreateUser)
@@ -113,7 +115,6 @@ func main() {
         v1.PUT("/users/update",UpdateUser)
         /* token:string expasswd:string newpasswd:string */
         v1.PUT("/users/updatepasswd",UpdateUserPasswd)
-
 
         /* book */
         /* token:string name:string category:string pages:int description:string */
@@ -180,6 +181,18 @@ type Token struct {
      Value string `form:"token" json:"token"`
 }
 
+func Auth(c *gin.Context)  {
+    token := Token{}
+    c.Bind(&token)
+    _, exist := loginToken[token.Value]
+    if exist == true {
+        c.JSON(202, gin.H{"status":"Accept"})
+
+    } else {
+        c.JSON(403, gin.H{"error":"No permission."})
+    }
+}
+
 func Logout(c *gin.Context) {
     token := Token{}
     c.Bind(&token)
@@ -218,7 +231,7 @@ func UserInfo(c *gin.Context) {
     if err := db.Table("users").Where("id = ?",userID).First(&user).Error; err != nil {
         c.JSON(422, gin.H{"error":"There are some things wrong."})
     } else {
-        c.JSON(201, gin.H{"account":user.Account, "name":user.Name, "email":user.Email})
+        c.JSON(200, gin.H{"account":user.Account, "name":user.Name, "email":user.Email})
     }
 }
 
@@ -242,18 +255,18 @@ func UpdateUser(c *gin.Context) {
         defer db.Close()
         user := Users{}
         if err := db.Table("users").Where("id = ?",userID).First(&user).Error; err != nil {
-            c.JSON(422, gin.H{"error":"There are some things wrong."})
+            c.JSON(406, gin.H{"error":"There are some things wrong."})
         } else {
             if user.Account != "" {
                 user.Name = updateUserParams.Name
                 user.Email = updateUserParams.Email
                 if err := db.Save(&user).Error; err != nil {
-                    c.JSON(422, gin.H{"error":"Can't update this user."})
+                    c.JSON(406, gin.H{"error":"Can't update this user."})
                 } else {
-                    c.JSON(201, gin.H{"status":"Update"})
+                    c.JSON(202, gin.H{"status":"Update"})
                 }
             } else {
-                c.JSON(422, gin.H{"error":"Can't find this user."})
+                c.JSON(406, gin.H{"error":"Can't find this user."})
             }
         }
     } else {
@@ -282,14 +295,14 @@ func UpdateUserPasswd(c *gin.Context)  {
         defer db.Close()
         user := Users{}
         if err := db.Table("users").Where("id = ? and passwd = ?",userID, upadateUserPasswdParams.Expasswd).First(&user).Error; err != nil {
-            c.JSON(422, gin.H{"error":"There are some things wrong."})
+            c.JSON(406, gin.H{"error":"There are some things wrong."})
         } else {
             if user.Account != "" {
                 user.Passwd = upadateUserPasswdParams.Newpasswd
                 if err := db.Save(&user).Error; err != nil {
-                    c.JSON(422, gin.H{"error":"Can't update this user."})
+                    c.JSON(406, gin.H{"error":"Can't update this user."})
                 } else {
-                    c.JSON(201, gin.H{"status":"Update"})
+                    c.JSON(202, gin.H{"status":"Update"})
                 }
             } else {
                 c.JSON(422, gin.H{"error":"Can't find this user."})
@@ -332,10 +345,10 @@ func CreateBook(c *gin.Context)  {
 
         var user Users
         if err := db.Table("users").Where("id = ?",userID).First(&user).Error; err != nil {
-            c.JSON(422, gin.H{"error":"Not found the user."})
+            c.JSON(406, gin.H{"error":"Not found the user."})
         } else {
             if err := db.Model(&user).Association("Books").Append(&book).Error; err != nil {
-                c.JSON(422, gin.H{"error":"Can't append this book."})
+                c.JSON(406, gin.H{"error":"Can't append this book."})
             } else {
                 c.JSON(201, gin.H{"status":"Created"})
             }
@@ -357,14 +370,14 @@ func BookInfos(c *gin.Context)  {
     defer db.Close()
     var user Users
     if err := db.Table("users").Where("id = ?",userID).First(&user).Error; err != nil {
-        c.JSON(422, gin.H{"error":"There are some things wrong."})
+        c.JSON(406, gin.H{"error":"There are some things wrong."})
     } else {
         books :=[]Books{}
         db.Model(&user).Related(&books, "Books")
         for index , _ := range books {
             db.Model(&books[index]).Related(&books[index].Records, "Records")
         }
-        c.JSON(201, gin.H{"books":books})
+        c.JSON(200, gin.H{"books":books})
 
     }
 }
@@ -401,7 +414,7 @@ func UpdateBook(c *gin.Context)  {
         }
 
         if updateBookParams.Pages < read {
-            c.JSON(422, gin.H{"error":" Pages of This book has been read over the set of pages."})
+            c.JSON(406, gin.H{"error":" Pages of This book has been read over the set of pages."})
             return
         }
 
@@ -411,9 +424,9 @@ func UpdateBook(c *gin.Context)  {
         book.Description = updateBookParams.Description
 
         if err := db.Save(&book).Error; err != nil {
-            c.JSON(422, gin.H{"error":"Can't update."})
+            c.JSON(406, gin.H{"error":"Can't update."})
         } else {
-            c.JSON(201, gin.H{"status":"Updated"})
+            c.JSON(202, gin.H{"status":"Updated"})
         }
     } else {
         c.JSON(422, gin.H{"error":"Can't find this book."})
@@ -437,10 +450,10 @@ func DeleteBook(c *gin.Context)  {
         db := InitDb()
         defer db.Close()
         if err := db.Table("books").Where("user_id=? and id=?",userID , deleteBookParams.BookID).Delete(&Books{}).Error; err != nil {
-            c.JSON(422, gin.H{"error":"Can't find this book."})
+            c.JSON(406, gin.H{"error":"Can't find this book."})
         } else {
             db.Table("book_records").Where("book_id=?",deleteBookParams.BookID).Delete(&Books{})
-            c.JSON(201, gin.H{"status": "Delete"})
+            c.JSON(202, gin.H{"status": "Delete"})
         }
     } else {
         c.JSON(422, gin.H{"error": "There are some empty fields."})
@@ -468,7 +481,7 @@ func CreateBookRecord(c *gin.Context) {
         defer db.Close()
         book := Books{}
         if err := db.Table("books").Where("user_id=? and id =?",userID, createBookRecordParams.BookID).First(&book).Error; err != nil {
-            c.JSON(422, gin.H{"error":"Can't find this book."})
+            c.JSON(406, gin.H{"error":"Can't find this book."})
         } else {
 
             db.Model(&book).Related(&book.Records, "Records")
@@ -479,7 +492,7 @@ func CreateBookRecord(c *gin.Context) {
                 read += record.Pages
             }
             if read + createBookRecordParams.Pages > book.Pages {
-                c.JSON(422, gin.H{"error":"Over pages of this book."})
+                c.JSON(406, gin.H{"error":"Over pages of this book."})
                 return
             }
             bookRecord := BookRecords {
@@ -487,7 +500,7 @@ func CreateBookRecord(c *gin.Context) {
                 Note: createBookRecordParams.Note,
             }
             if err := db.Model(&book).Association("Records").Append(&bookRecord).Error; err != nil {
-                c.JSON(422, gin.H{"error":"Can't append this BookRecord."})
+                c.JSON(406, gin.H{"error":"Can't append this BookRecord."})
             } else {
                 c.JSON(201, gin.H{"status":"Created"})
             }
@@ -509,7 +522,7 @@ func BookRecordInfos(c *gin.Context)  {
     defer db.Close()
     books := []Books{}
     if err := db.Table("books").Where("user_id = ?", userID).Find(&books).Error; err != nil {
-        c.JSON(422, gin.H{"error":"There are some things wrong."})
+        c.JSON(406, gin.H{"error":"There are some things wrong."})
     } else {
         records := []BookRecords{}
         for _, book := range books {
@@ -518,7 +531,7 @@ func BookRecordInfos(c *gin.Context)  {
                 records=append(records,record)
             }
         }
-        c.JSON(201, gin.H{"bookrecords": records})
+        c.JSON(200, gin.H{"bookrecords": records})
     }
 }
 
@@ -543,11 +556,11 @@ func UpdateBookRecord(c *gin.Context)  {
         defer db.Close()
         book := Books{}
         if err := db.Table("books").Where("user_id = ? and id = ?", userID, updateBookRecordParams.BookID).First(&book).Error; err != nil {
-            c.JSON(422, gin.H{"error":"Can't find this book."})
+            c.JSON(405, gin.H{"error":"Can't find this book."})
         } else {
             updateRecord := BookRecords{}
             if err := db.Table("book_records").Where("id = ?",updateBookRecordParams.RecordID).First(&updateRecord).Error; err != nil {
-                c.JSON(422, gin.H{"error":"Can't find this record."})
+                c.JSON(406, gin.H{"error":"Can't find this record."})
             }else {
                 db.Model(&book).Related(&book.Records,"Records")
                 read := 0
@@ -556,14 +569,14 @@ func UpdateBookRecord(c *gin.Context)  {
                 }
                 read -= updateRecord.Pages
                 if read + updateBookRecordParams.Pages > book.Pages {
-                    c.JSON(422, gin.H{"error":"Over pages of this book."})
+                    c.JSON(406, gin.H{"error":"Over pages of this book."})
                 } else {
                     updateRecord.Pages=updateBookRecordParams.Pages
                     updateRecord.Note=updateBookRecordParams.Note
                     if err := db.Table("book_records").Save(&updateRecord).Error; err != nil {
-                        c.JSON(422, gin.H{"error":"Can't update this record."})
+                        c.JSON(406, gin.H{"error":"Can't update this record."})
                     }else {
-                        c.JSON(201,gin.H{"status":"Updated"})
+                        c.JSON(202,gin.H{"status":"Updated"})
                     }
                 }
             }
@@ -592,16 +605,16 @@ func DeleteBookRecord(c *gin.Context)  {
         defer db.Close()
         book := Books{}
         if err := db.Table("books").Where("user_id=? and id=?",userID, deleteBookRecordParams.BookID).First(&book).Error; err != nil {
-            c.JSON(422, gin.H{"error":"Can't find this book."})
+            c.JSON(406, gin.H{"error":"Can't find this book."})
         } else {
             record := BookRecords{}
             if err := db.Table("book_records").Where("book_id=? and id=?",deleteBookRecordParams.BookID,deleteBookRecordParams.RecordID).First(&record).Error; err != nil {
-                c.JSON(422, gin.H{"error":"Can't find this record."})
+                c.JSON(406, gin.H{"error":"Can't find this record."})
             } else {
                 if err := db.Delete(&record).Error; err != nil {
-                    c.JSON(422, gin.H{"error":"Can't delete this record."})
+                    c.JSON(406, gin.H{"error":"Can't delete this record."})
                 } else {
-                    c.JSON(201, gin.H{"status":"Deleted"})
+                    c.JSON(202, gin.H{"status":"Deleted"})
                 }
             }
         }
