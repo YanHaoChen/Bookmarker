@@ -18,7 +18,10 @@
 ## Overview
 ![Overview](https://github.com/YanHaoChen/Bookmarker/blob/master/img/overview.png?raw=true)
 
-## 目前進度：50%
+## Books
+![Overview](https://github.com/YanHaoChen/Bookmarker/blob/master/img/books.png?raw=true)
+
+## 目前進度：70%
 
 
 

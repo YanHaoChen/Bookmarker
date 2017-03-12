@@ -3,7 +3,6 @@ package main
 import (
     "crypto/rand"
 	"fmt"
-    "net/http"
     "github.com/gin-gonic/gin"
     "github.com/jinzhu/gorm"
     _ "github.com/mattn/go-sqlite3"
@@ -64,9 +63,20 @@ func randToken() string {
 
 func Cors() gin.HandlerFunc {
     return func(c *gin.Context) {
-        c.Writer.Header().Add("Access-Control-Allow-Origin", "*")
-        c.Next()
-    }
+         c.Writer.Header().Set("Access-Control-Allow-Origin", "*")
+         c.Writer.Header().Set("Access-Control-Max-Age", "86400")
+         c.Writer.Header().Set("Access-Control-Allow-Methods", "POST, GET, OPTIONS, PUT, DELETE, UPDATE")
+         c.Writer.Header().Set("Access-Control-Allow-Headers", "Origin, Content-Type, Content-Length, Accept-Encoding, X-CSRF-Token, Authorization")
+         c.Writer.Header().Set("Access-Control-Expose-Headers", "Content-Length")
+         c.Writer.Header().Set("Access-Control-Allow-Credentials", "true")
+
+         if c.Request.Method == "OPTIONS" {
+             fmt.Println("OPTIONS")
+             c.AbortWithStatus(200)
+         } else {
+             c.Next()
+         }
+     }
 }
 
 var router *gin.Engine
@@ -79,24 +89,6 @@ func main() {
     router.Use(Cors())
     loginToken = make(map[string]uint)
 
-    /* bootstrap */
-    router.StaticFile("/bootstrap/css/bootstrap.min.css","./bower_components/bootstrap/dist/css/bootstrap.min.css")
-    router.StaticFile("/bootstrap/css/bootstrap.min.css.map","./bower_components/bootstrap/dist/css/bootstrap.min.css.map")
-    router.StaticFile("/bootstrap/css/bootstrap-theme.min.css","./bower_components/bootstrap/dist/css/bootstrap-theme.min.css")
-    router.StaticFile("/bootstrap/css/bootstrap-theme.min.css.map","./bower_components/bootstrap/dist/css/bootstrap-theme.min.css.map")
-    router.StaticFile("/bootstrap/css/signin.css","./bower_components/bootstrap/dist/css/signin.css")
-    router.StaticFile("/bootstrap/css/dashboard.css","./bower_components/bootstrap/dist/css/dashboard.css")
-
-    /* js */
-    router.StaticFile("/js/vue/vue.min.js","./bower_components/vue/dist/vue.min.js")
-    router.StaticFile("/js/vue-resource/vue-resource.min.js","./bower_components/vue-resource/dist/vue-resource.min.js")
-    router.StaticFile("/js/jsSHA/sha.js","./bower_components/jsSHA/src/sha.js")
-    /* view */
-    view := router.Group("view")
-    {
-        view.GET("/welcome", Welcome)
-        view.GET("/dashboard", Dashboard)
-    }
     /* api */
     v1 := router.Group("api/v1")
     {
@@ -122,7 +114,7 @@ func main() {
         /* token:string */
         v1.GET("/books/infos", BookInfos)
         /* token:string bookID:uint name:string category:string pages:int description:string */
-        v1.PUT("/books/update",UpdateBook)
+        v1.PUT("/books/update", UpdateBook)
         /* token:string bookID:uint */
         v1.DELETE("/books/delete",DeleteBook)
 
@@ -139,18 +131,6 @@ func main() {
 
     }
     router.Run(":8080")
-}
-
-func Welcome(c *gin.Context) {
-    router.LoadHTMLFiles("templates/welcome.html")
-    c.HTML(http.StatusOK, "welcome.html", gin.H{
-    })
-}
-
-func Dashboard(c *gin.Context) {
-    router.LoadHTMLFiles("templates/dashboard.html")
-    c.HTML(http.StatusOK, "dashboard.html", gin.H{
-    })
 }
 
 type LoginForm struct {
@@ -426,7 +406,7 @@ func UpdateBook(c *gin.Context)  {
         if err := db.Save(&book).Error; err != nil {
             c.JSON(406, gin.H{"error":"Can't update."})
         } else {
-            c.JSON(202, gin.H{"status":"Updated"})
+            c.JSON(202, gin.H{"status":book})
         }
     } else {
         c.JSON(422, gin.H{"error":"Can't find this book."})
@@ -435,7 +415,7 @@ func UpdateBook(c *gin.Context)  {
 }
 type DeleteBookParams struct {
     Token string `form:"token" json:"token"`
-    BookID string `form:"bookID" json:"bookID"`
+    BookID int `form:"bookID" json:"bookID"`
 }
 
 func DeleteBook(c *gin.Context)  {
@@ -446,7 +426,7 @@ func DeleteBook(c *gin.Context)  {
         c.JSON(403, gin.H{"error":"No permission."})
         return
     }
-    if deleteBookParams.BookID != "" {
+    if deleteBookParams.BookID  > 0  {
         db := InitDb()
         defer db.Close()
         if err := db.Table("books").Where("user_id=? and id=?",userID , deleteBookParams.BookID).Delete(&Books{}).Error; err != nil {

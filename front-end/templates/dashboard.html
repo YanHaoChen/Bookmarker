@@ -16,6 +16,30 @@
         .progress-bar-success{
             background-color:#3c763d
         }
+        .updatebtn{
+            background-image:linear-gradient(to bottom,#3c763d 0,#3c763d 100%);
+            border-color:#ffffff;
+            color:#ffffff;
+        }
+        .cancelbtn{
+            background-image:linear-gradient(to bottom,#d9534f 0,#d9534f 100%);
+            border-color:#ffffff;
+            color:#ffffff;
+        }
+        .deletebtn{
+            background-image:linear-gradient(to bottom,#d9534f 0,#d9534f 100%);
+            border-color:#ffffff;
+            color:#ffffff;
+        }
+        .confirmbtn{
+            background-image:linear-gradient(to bottom,#337ab7 0,#337ab7 100%);
+            border-color:#ffffff;
+            color: #ffffff;
+        }
+        .btn:focus, .btn:active:focus, .btn.active:focus, .btn:hover,.btn:hover {
+            outline: 0 none;
+            color:#ffffff;
+        }
     </style>
     <title>Dashboard</title>
   </head>
@@ -70,7 +94,7 @@
                             </div>
                         </div>
                         <br/>
-                        <div id="category" v-for="category in overviewCategorys">
+                        <div id="category" v-for="category in categorys">
                             <h1 class="page-header">{{category}}</h1>
                             <div class="table-responsive">
                                 <table class="table table-striped">
@@ -89,7 +113,7 @@
                                             <td>{{book.name}}</td>
                                             <td>
                                                 <div class="progress">
-                                                    <div class="progress-bar progress-bar-success" role="progressbar" v-bind:style="{ width: (book.read / book.pages) * 100 + '%' }">{{(book.read / book.pages) * 100 }}%</div>
+                                                    <div class="progress-bar progress-bar-success" role="progressbar" v-bind:style="{ width: ((book.read / book.pages) * 100).toFixed(1) + '%' }">{{((book.read / book.pages) * 100).toFixed(1) }}%</div>
                                                 </div>
                                             </td>
                                             <td>{{book.read}}/{{book.pages}}</td>
@@ -102,7 +126,121 @@
                 </div>
                 <div id="Booksview" v-if="booksviewActive">
                     <div class="col-sm-9 col-sm-offset-3 col-md-10 col-md-offset-2 main">
-                        
+                        <div id="Category" v-for="category in categorys">
+                            <button v-on:click="" class="btn updatebtn" style="float:right">Add a book</button>
+                            <div v-if="addBookTag">
+                                <div class="row">
+                                    <div class="col-md-3">
+                                        <p style="font-size:15px">Name: <span><input type="text" size="20" value="updateBookName" v-model="updateBookName" ></span></p>
+                                    </div>
+                                    <div class="col-md-2">
+                                        <p style="font-size:15px">Pages: <span><input type="text" size="5" value="updatePages" v-model="updatePages" ></span></p>
+                                    </div>
+                                    <div class="col-md-2">
+                                        <p style="font-size:15px">Category: <span><input type="text" size="5" value="updateCategory" v-model="updateCategory"></span></p>
+                                    </div>
+                                </div>
+                                <p style="font-size:15px">Description:</p>
+                                <textarea class="form-control" type="text" value="updateDescription" v-model="updateDescription"></textarea>
+                            </div>
+                            <h1 class="page-header">{{category}}</h1>
+                            <div id="Booksviewlist" v-for="(book, index) in overviewList[category]">
+                                <div class="panel panel-default">
+                                    <div class="panel-heading" style="font-size:20px">{{book.name}}</div>
+                                    <div class="panel-body">
+                                        <button v-on:click="deleteBook(category, index)" class="btn deletebtn" style="float:right" v-if="(book.updateTag || book.deleteTag) != true">Delete</button>
+                                        <button v-on:click="updateBook(category,index, book.name, book.pages, book.description)" class="btn updatebtn" style="float:right" v-if="(book.updateTag || book.deleteTag) != true">Update</button>
+                                        <button v-on:click="confirmBook(category, index)" class="btn confirmbtn" style="float:right" v-if="(book.updateTag || book.deleteTag)">Confirm</button>
+                                        <button v-on:click="cancelBook(category,index)" class="btn cancelbtn" style="float:right" v-if="(book.updateTag || book.deleteTag)">Cancel</button>
+
+                                        <div id="bookinfo" v-if="book.updateTag != true">
+                                            <div class="row">
+                                                <div class="col-md-3">
+                                                    <p style="font-size:15px">CreateAt: {{book.CreatedAt.split('T')[0]}}</p>
+                                                </div>
+                                                <div class="col-md-3">
+                                                    <p style="font-size:15px">Pages: {{book.pages}}</p>
+                                                </div>
+                                                <div class="col-md-3">
+                                                    <p style="font-size:15px">Category: {{category}}</p>
+                                                </div>
+                                            </div>
+                                            <p style="font-size:15px">Progress:</p>
+                                            <div class="progress">
+                                                <div class="progress-bar progress-bar-success" role="progressbar" v-bind:style="{ width: ((book.read / book.pages) * 100).toFixed(1) + '%' }">{{((book.read / book.pages) * 100).toFixed(1) }}%</div>
+                                            </div>
+                                            <p style="font-size:15px">Description:</p>
+                                            <div class="container">
+                                                {{book.description}}
+                                            </div>
+                                        </div>
+                                        <div id="bookinfoupdate" v-if="book.updateTag">
+                                            <div class="row">
+                                                <div class=" col-md-2">
+                                                    <p style="font-size:15px">CreateAt: {{book.CreatedAt.split('T')[0]}}</p>
+                                                </div>
+                                                <div class="col-md-3">
+                                                    <p style="font-size:15px">Name: <span><input type="text" size="20" value="updateBookName" v-model="updateBookName" ></span></p>
+                                                </div>
+                                                <div class="col-md-2">
+                                                    <p style="font-size:15px">Pages: <span><input type="text" size="5" value="updatePages" v-model="updatePages" ></span></p>
+                                                </div>
+                                                <div class="col-md-2">
+                                                    <p style="font-size:15px">Category: <span><input type="text" size="5" value="updateCategory" v-model="updateCategory"></span></p>
+                                                </div>
+                                            </div>
+                                            <p style="font-size:15px">Progress:</p>
+                                            <div class="progress">
+                                                <div class="progress-bar progress-bar-success" role="progressbar" v-bind:style="{ width: ((book.read / book.pages) * 100).toFixed(1) + '%' }">{{((book.read / book.pages) * 100).toFixed(1) }}%</div>
+                                            </div>
+                                            <p style="font-size:15px">Description:</p>
+                                            <div class="container">
+                                                {{book.description}}
+                                            </div>
+                                            <p style="font-size:15px">Description:</p>
+                                            <textarea class="form-control" type="text" value="updateDescription" v-model="updateDescription"></textarea>
+                                        </div>
+                                    </div>
+                                        <table class="table">
+                                            <thead>
+                                                <tr>
+                                                    <th >#</th>
+                                                    <th >Time</th>
+                                                    <th >Pages</th>
+                                                    <th >Note</th>
+                                                    <th></th>
+                                                </tr>
+                                            </thead>
+                                            <tbody v-for="(record, index2) in book['records']">
+                                                <tr v-if="record.updateTag != true">
+                                                    <th>{{index2 + 1}}</th>
+                                                    <th>{{record.CreatedAt.split('T')[0]}}</th>
+                                                    <th>{{record.pages}}</th>
+                                                    <th>{{record.note}}</th>
+                                                    <th>
+                                                        <button v-on:click="deleteRecord(category, index, index2)" class="btn deletebtn" style="float:right" >Delete</button>
+                                                        <button v-on:click="updateRecord(category, index, index2, record.pages, record.note)" class="btn updatebtn" style="float:right" >Update</button>
+                                                    </th>
+                                                </tr>
+                                                <tr v-if="(record.updateTag)">
+                                                    <th>{{index2 + 1}}</th>
+                                                    <th>{{record.CreatedAt.split('T')[0]}}</th>
+                                                    <th>
+                                                        <input type="text" size="5" value="updatePages" v-model="updatePages" >
+                                                    </th>
+                                                    <th>
+                                                        <textarea class="form-control" type="text" value="updateDescription" v-model="updateDescription"></textarea>
+                                                    </th>
+                                                    <th>
+                                                        <button v-on:click="confirmRecord(category, index, index2)" class="btn confirmbtn" style="float:right" >Confirm</button>
+                                                        <button v-on:click="cancelRecord(category,index, index2)" class="btn cancelbtn" style="float:right">Cancel</button>
+                                                    </th>
+                                                </tr>
+                                            </tbody>
+                                        </table>
+                                    </div>
+                            </div>
+                        </div>
                     </div>
                 </div>
             </div>
@@ -110,21 +248,26 @@
       </div>
   </body>
   <script type="text/javascript">
-
-  Vue.http.options.emulateJSON = true;
-
+  //Vue.http.options.emulateJSON = true;
   var count = 0;
   var app = new Vue({
       el:'#app',
       data:{
           username: "",
+          addBookTag: false,
           overviewActive: true,
           booksviewActive: false,
           overviewReadingBookCount: 0,
           overviewBookRecordCount: 0,
           overviewReadCount: 0,
-          overviewCategorys:[],
-          overviewList:{}
+          categorys:[],
+          overviewList:{},
+          updateLock:false,
+          deleteLock:false,
+          updatePages:0,
+          updateDescription:"",
+          updateCategory:"",
+          updateBookName:""
       },
       created: function () {
           var vm = this
@@ -138,8 +281,7 @@
       },
       methods:{
           getBooks: function () {
-              var vm = this
-
+              var vm = this;
               readingBookCount = 0;
               bookRecordCount = 0;
               readCount = 0;
@@ -147,9 +289,13 @@
                   var books = response.data["books"];
                   for(i=0; i < books.length; i++){
                       var read = 0;
+                      books[i].updateTag = false;
+                      books[i].deleteTag = false;
                       for(j=0;j<books[i].records.length;j++) {
-                           bookRecordCount++;
-                          read += books[i].records[j].pages
+                          bookRecordCount++;
+                          read += books[i].records[j].pages;
+                          books[i].records[j].updateTag = false;
+                          books[i].records[j].deleteTag = false;
                       }
                       books[i]["read"] = read;
 
@@ -172,7 +318,7 @@
                   vm.overviewReadingBookCount = readingBookCount;
                   vm.overviewBookRecordCount = bookRecordCount;
                   vm.overviewReadCount = readCount;
-                  vm.overviewCategorys = keys;
+                  vm.categorys = keys;
               },(response) => {
                   sessionStorage.clear();
                   location.href = '/templates/welcome.html';
@@ -189,8 +335,144 @@
           showBooksview : function () {
               this.overviewActive = false;
               this.booksviewActive = true;
-          }
+          },
+          updateBook : function (category, index, name, pages, description) {
+              if (this.updateLock != true){
+                  this.overviewList[category][index].updateTag = true;
+                  this.updatePages = pages;
+                  this.updateDescription = description;
+                  this.updateBookName = name;
+                  this.updateCategory = category;
+                  this.booksviewActive = false;
+                  this.booksviewActive = true;
 
+                  this.updateLock = true;
+              }
+          },
+          deleteBook : function (category, index) {
+              if (this.deleteLock != true){
+                  this.overviewList[category][index].deleteTag = true;
+                  this.booksviewActive = false;
+                  this.booksviewActive = true;
+
+                  this.deleteLock = true;
+              }
+          },
+          cancelBook : function (category, index){
+              this.overviewList[category][index].updateTag = false;
+              this.overviewList[category][index].deleteTag = false;
+              this.updateLock = false;
+              this.deleteLock = false;
+              this.booksviewActive = false;
+              this.booksviewActive = true;
+          },
+          //status 0 = update, 1=delele
+          confirmBook : function (category, index){
+              if (this.overviewList[category][index].updateTag) {
+                  var vm = this;
+                  var updateBody = {
+                      "token":sessionStorage["token"],
+                      "bookID":vm.overviewList[category][index].ID,
+                      "name":vm.updateBookName,
+                      "category":vm.updateCategory,
+                      "pages":parseInt(vm.updatePages),
+                      "description":vm.updateDescription
+                  }
+                  vm.$http.put("http://127.0.0.1:8080/api/v1/books/update",updateBody).then((response) => {
+                      this.overviewList = {};
+                      this.updatePages=0;
+                      this.updateDescription="";
+                      this.updateCategory="";
+                      this.updateBookName="";
+                      vm.getBooks();
+                  },(response) => {
+                      alert(response.data["error"])
+                  })
+              } else if (this.overviewList[category][index].deleteTag){
+                  var vm = this;
+                  var deleteBody = {
+                      "token":sessionStorage["token"],
+                      "bookID":this.overviewList[category][index].ID
+                  }
+                  vm.$http.delete("http://127.0.0.1:8080/api/v1/books/delete",{body: deleteBody}).then((response) => {
+                      this.overviewList = {};
+                      vm.getBooks();
+                  },(response) => {
+                      alert(response.data["error"])
+                  })
+              }
+              this.overviewList[category][index].updateTag = false;
+              this.overviewList[category][index].deleteTag = false;
+              this.updateLock = false;
+              this.deleteLock = false;
+          },
+          updateRecord : function (category, index, n, pages, note) {
+              if (this.updateLock != true){
+                  this.overviewList[category][index]['records'][n].updateTag = true;
+                  this.updatePages = pages;
+                  this.updateDescription = note;
+
+                  this.booksviewActive = false;
+                  this.booksviewActive = true;
+                  this.updateLock = true;
+              }
+          },
+          deleteRecord : function (category, index, n) {
+              if (this.deleteLock != true){
+                  this.overviewList[category][index]['records'][n].deleteTag = true;
+
+                  this.booksviewActive = false;
+                  this.booksviewActive = true;
+                  this.deleteLock = true;
+              }
+          },
+          cancelRecord : function (category, index, n){
+              this.overviewList[category][index]['records'][n].updateTag = false;
+              this.overviewList[category][index]['records'][n].deleteTag = false;
+              this.updateLock = false;
+              this.deleteLock = false;
+              this.booksviewActive = false;
+              this.booksviewActive = true;
+          },
+          confirmRecord : function (category, index, n){
+              if (this.overviewList[category][index]['records'][n].updateTag) {
+                  var vm = this;
+                  var updateBody = {
+                      "token":sessionStorage["token"],
+                      "bookID":vm.overviewList[category][index].ID,
+                      "recordID":vm.overviewList[category][index]['records'][n].ID,
+                      "pages":parseInt(vm.updatePages),
+                      "note":vm.updateDescription
+                  }
+                  vm.$http.put("http://127.0.0.1:8080/api/v1/bookrecords/update",updateBody).then((response) => {
+                      this.overviewList = {};
+                      this.updatePages=0;
+                      this.updateDescription="";
+                      this.updateCategory="";
+                      this.updateBookName="";
+                      vm.getBooks();
+                  },(response) => {
+                      alert(response.data["error"])
+                  })
+              } else if (this.overviewList[category][index]['records'][n].deleteTag){
+                  var vm = this;
+                  var deleteBody = {
+                      "token":sessionStorage["token"],
+                      "bookID":this.overviewList[category][index].ID,
+                      "recordID":this.overviewList[category][index]['records'][n].ID
+                  }
+                  vm.$http.delete("http://127.0.0.1:8080/api/v1/books/delete",{body: deleteBody}).then((response) => {
+                      this.overviewList = {};
+                      vm.getBooks();
+                  },(response) => {
+                      alert(response.data["error"])
+                  })
+              }
+              this.overviewList[category][index]['records'][n].updateTag = false;
+              this.overviewList[category][index]['records'].deleteTag = false;
+              this.updateLock = false;
+              this.deleteLock = false;
+          }
       }
   })
   </script>
