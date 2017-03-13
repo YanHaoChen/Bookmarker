@@ -40,6 +40,7 @@
             outline: 0 none;
             color:#ffffff;
         }
+
     </style>
     <title>Dashboard</title>
   </head>
@@ -82,15 +83,21 @@
                         <div class="row">
                             <div class="col-md-4">
                                 <p style="font-size:20px">Reading:</p>
-                                <p style="font-size:55px">{{overviewReadingBookCount}}<span style="font-size:20px"> books.</span></p>
+                                <p style="font-size:55px" v-if="overviewReadingBookCount < 2">{{overviewReadingBookCount}}<span style="font-size:20px"> book.</span></p>
+                                <p style="font-size:55px" v-if="overviewReadingBookCount > 1">{{overviewReadingBookCount}}<span style="font-size:20px"> books.</span></p>
+
                             </div>
                             <div class="col-md-4">
                                 <p style="font-size:20px">Have recorded:</p>
-                                <p style="font-size:55px">{{overviewBookRecordCount}}<span style="font-size:20px"> times.</span></p>
+                                <p style="font-size:55px" v-if="overviewBookRecordCount < 2 " >{{overviewBookRecordCount}}<span style="font-size:20px"> time.</span></p>
+                                <p style="font-size:55px" v-if="overviewBookRecordCount > 1">{{overviewBookRecordCount}}<span style="font-size:20px"> times.</span></p>
+
                             </div>
                             <div class="col-md-4">
                                 <p style="font-size:20px">Have read:</p>
-                                <p style="font-size:55px">{{overviewReadCount}}<span style="font-size:20px"> books.</span></p>
+                                <p style="font-size:55px" v-if="overviewReadCount < 2">{{overviewReadCount}}<span style="font-size:20px"> book.</span></p>
+                                <p style="font-size:55px" v-if="overviewReadCount > 1">{{overviewReadCount}}<span style="font-size:20px"> books.</span></p>
+
                             </div>
                         </div>
                         <br/>
@@ -101,9 +108,9 @@
                                     <thead>
                                         <tr>
                                             <th width="5%">#</th>
-                                            <th width="25%">Name</th>
+                                            <th width="35%">Title</th>
                                             <th>Progress</th>
-                                            <th width="10%">Pages</th>
+                                            <th width="15%">Pages</th>
                                         </tr>
                                     </thead>
                                     <tbody>
@@ -132,7 +139,7 @@
                             <button v-on:click="cancelAddBook" class="btn cancelbtn" style="float:right">Cancel</button>
                             <div class="row">
                                 <div class="col-md-3">
-                                    <p style="font-size:15px">Name: <span><input type="text" size="20" value="updateBookName" v-model="updateBookName" ></span></p>
+                                    <p style="font-size:15px">Title: <span><input type="text" size="20" value="updateBookName" v-model="updateBookName" ></span></p>
                                 </div>
                                 <div class="col-md-2">
                                     <p style="font-size:15px">Pages: <span><input type="text" size="5" value="updatePages" v-model="updatePages" ></span></p>
@@ -158,7 +165,7 @@
                                         <div id="bookinfo" v-if="book.updateTag != true">
                                             <div class="row">
                                                 <div class="col-md-3">
-                                                    <p style="font-size:15px">CreateAt: {{book.CreatedAt.split('T')[0]}}</p>
+                                                    <p style="font-size:15px">Started from: {{book.CreatedAt.split('T')[0]}}</p>
                                                 </div>
                                                 <div class="col-md-3">
                                                     <p style="font-size:15px">Pages: {{book.pages}}</p>
@@ -179,10 +186,10 @@
                                         <div id="bookinfoupdate" v-if="book.updateTag">
                                             <div class="row">
                                                 <div class=" col-md-2">
-                                                    <p style="font-size:15px">CreateAt: {{book.CreatedAt.split('T')[0]}}</p>
+                                                    <p style="font-size:15px">Started from: {{book.CreatedAt.split('T')[0]}}</p>
                                                 </div>
                                                 <div class="col-md-3">
-                                                    <p style="font-size:15px">Name: <span><input type="text" size="20" value="updateBookName" v-model="updateBookName" ></span></p>
+                                                    <p style="font-size:15px">Title: <span><input type="text" size="20" value="updateBookName" v-model="updateBookName" ></span></p>
                                                 </div>
                                                 <div class="col-md-2">
                                                     <p style="font-size:15px">Pages: <span><input type="text" size="5" value="updatePages" v-model="updatePages" ></span></p>
@@ -192,12 +199,8 @@
                                                 </div>
                                             </div>
                                             <p style="font-size:15px">Progress:</p>
-                                            <div class="progress">
+                                            <div class="progress" style="">
                                                 <div class="progress-bar progress-bar-success" role="progressbar" v-bind:style="{ width: ((book.read / book.pages) * 100).toFixed(1) + '%' }">{{((book.read / book.pages) * 100).toFixed(1) }}%</div>
-                                            </div>
-                                            <p style="font-size:15px">Description:</p>
-                                            <div class="container">
-                                                {{book.description}}
                                             </div>
                                             <p style="font-size:15px">Description:</p>
                                             <textarea class="form-control" type="text" value="updateDescription" v-model="updateDescription"></textarea>
@@ -207,62 +210,62 @@
                                             <thead>
                                                 <tr>
                                                     <th >#</th>
-                                                    <th >Time</th>
-                                                    <th >Pages</th>
+                                                    <th width="10%">Date</th>
+                                                    <th width="8%">Pages</th>
                                                     <th >Note</th>
-                                                    <th></th>
+                                                    <th width="18%"></th>
                                                 </tr>
                                             </thead>
                                             <tbody v-for="(record, index2) in book['records']">
                                                 <tr v-if="record.updateTag != true">
-                                                    <th>{{index2 + 1}}</th>
-                                                    <th>{{record.CreatedAt.split('T')[0]}}</th>
-                                                    <th>{{record.pages}}</th>
-                                                    <th>{{record.note}}</th>
-                                                    <th>
+                                                    <td>{{index2 + 1}}</td>
+                                                    <td>{{record.CreatedAt.split('T')[0]}}</td>
+                                                    <td>{{record.pages}}</td>
+                                                    <td>{{record.note}}</td>
+                                                    <td>
                                                         <button v-on:click="deleteRecord(category, index, index2)" class="btn deletebtn" style="float:right" >Delete</button>
                                                         <button v-on:click="updateRecord(category, index, index2, record.pages, record.note)" class="btn updatebtn" style="float:right" >Update</button>
-                                                    </th>
+                                                    </td>
                                                 </tr>
 
                                                 <tr v-if="(record.updateTag)">
-                                                    <th>{{index2 + 1}}</th>
-                                                    <th>{{record.CreatedAt.split('T')[0]}}</th>
-                                                    <th>
+                                                    <td>{{index2 + 1}}</td>
+                                                    <td>{{record.CreatedAt.split('T')[0]}}</td>
+                                                    <td>
                                                         <input type="text" size="5" value="updatePages" v-model="updatePages" >
-                                                    </th>
-                                                    <th>
+                                                    </td>
+                                                    <td>
                                                         <textarea class="form-control" type="text" value="updateDescription" v-model="updateDescription"></textarea>
-                                                    </th>
-                                                    <th>
+                                                    </td>
+                                                    <td>
                                                         <button v-on:click="confirmRecord(category, index, index2)" class="btn confirmbtn" style="float:right" >Confirm</button>
                                                         <button v-on:click="cancelRecord(category,index, index2)" class="btn cancelbtn" style="float:right">Cancel</button>
-                                                    </th>
+                                                    </td>
                                                 </tr>
                                             </tbody>
                                             <tbody>
                                                 <tr v-if="book.addRecordTag != true">
-                                                    <th></th>
-                                                    <th></th>
-                                                    <th></th>
-                                                    <th></th>
-                                                    <th>
+                                                    <td></td>
+                                                    <td></td>
+                                                    <td></td>
+                                                    <td></td>
+                                                    <td>
                                                         <button v-on:click="addRecord(category,index)" class="btn confirmbtn" style="float:right" >Add a record</button>
-                                                    </th>
+                                                    </td>
                                                 </tr>
                                                 <tr v-if="book.addRecordTag">
-                                                    <th>#</th>
-                                                    <th>#</th>
-                                                    <th>
+                                                    <td>#</td>
+                                                    <td>#</td>
+                                                    <td>
                                                         <input type="text" size="5" value="updatePages" v-model="updatePages" >
-                                                    </th>
-                                                    <th>
+                                                    </td>
+                                                    <td>
                                                         <textarea class="form-control" type="text" value="updateDescription" v-model="updateDescription"></textarea>
-                                                    </th>
-                                                    <th>
+                                                    </td>
+                                                    <td>
                                                         <button v-on:click="confirmAddRecord(category, index)" class="btn confirmbtn" style="float:right" >Confirm</button>
                                                         <button v-on:click="cancelAddRecord(category,index)" class="btn cancelbtn" style="float:right">Cancel</button>
-                                                    </th>
+                                                    </td>
                                                 </tr>
                                             </tbody>
                                         </table>
@@ -421,6 +424,10 @@
                   this.$http.put("http://127.0.0.1:8080/api/v1/books/update",updateBody).then((response) => {
                       this.overviewList = {};
                       this.getBooks();
+                      this.updatePages=0;
+                      this.updateDescription="";
+                      this.updateCategory="";
+                      this.updateBookName="";
                   },(response) => {
                       alert(response.data["error"])
                   })
@@ -507,8 +514,8 @@
               }
 
               this.$http.post("http://127.0.0.1:8080/api/v1/bookrecords/create",createBody).then((response) => {
-                  this.overviewList = {};
-                  this.getBooks();
+                   this.overviewList = {};
+                   this.getBooks();
               },(response)=>{
                   alert(response.data["error"])
               })

@@ -119,11 +119,11 @@ func main() {
         v1.DELETE("/books/delete",DeleteBook)
 
         /* BookRecord */
-        /* token:string bookID:string pages:int note:string */
+        /* token:string bookID:uint pages:int note:string */
         v1.POST("/bookrecords/create",CreateBookRecord)
         /* token:string */
         v1.GET("/bookrecords/infos",BookRecordInfos)
-        /* token:string bookID:string recordID:uint pages:int note:string */
+        /* token:string bookID:uint recordID:uint pages:int note:string */
         v1.PUT("/bookrecords/update",UpdateBookRecord)
         /* token:string bookID:uint recordID:uint */
         v1.DELETE("/bookrecords/delete",DeleteBookRecord)
