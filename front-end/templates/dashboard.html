@@ -126,23 +126,25 @@
                 </div>
                 <div id="Booksview" v-if="booksviewActive">
                     <div class="col-sm-9 col-sm-offset-3 col-md-10 col-md-offset-2 main">
-                        <div id="Category" v-for="category in categorys">
-                            <button v-on:click="" class="btn updatebtn" style="float:right">Add a book</button>
-                            <div v-if="addBookTag">
-                                <div class="row">
-                                    <div class="col-md-3">
-                                        <p style="font-size:15px">Name: <span><input type="text" size="20" value="updateBookName" v-model="updateBookName" ></span></p>
-                                    </div>
-                                    <div class="col-md-2">
-                                        <p style="font-size:15px">Pages: <span><input type="text" size="5" value="updatePages" v-model="updatePages" ></span></p>
-                                    </div>
-                                    <div class="col-md-2">
-                                        <p style="font-size:15px">Category: <span><input type="text" size="5" value="updateCategory" v-model="updateCategory"></span></p>
-                                    </div>
+                        <button v-if="addBookTag == false" v-on:click="addBook" class="btn updatebtn" style="float:right">Add a book</button>
+                        <div v-if="addBookTag">
+                            <button v-on:click="comfirmAddBook" class="btn confirmbtn" style="float:right">Confirm</button>
+                            <button v-on:click="cancelAddBook" class="btn cancelbtn" style="float:right">Cancel</button>
+                            <div class="row">
+                                <div class="col-md-3">
+                                    <p style="font-size:15px">Name: <span><input type="text" size="20" value="updateBookName" v-model="updateBookName" ></span></p>
                                 </div>
-                                <p style="font-size:15px">Description:</p>
-                                <textarea class="form-control" type="text" value="updateDescription" v-model="updateDescription"></textarea>
+                                <div class="col-md-2">
+                                    <p style="font-size:15px">Pages: <span><input type="text" size="5" value="updatePages" v-model="updatePages" ></span></p>
+                                </div>
+                                <div class="col-md-2">
+                                    <p style="font-size:15px">Category: <span><input type="text" size="5" value="updateCategory" v-model="updateCategory"></span></p>
+                                </div>
                             </div>
+                            <p style="font-size:15px">Description:</p>
+                            <textarea class="form-control" type="text" value="updateDescription" v-model="updateDescription"></textarea>
+                        </div>
+                        <div id="Category" v-for="category in categorys">
                             <h1 class="page-header">{{category}}</h1>
                             <div id="Booksviewlist" v-for="(book, index) in overviewList[category]">
                                 <div class="panel panel-default">
@@ -222,6 +224,7 @@
                                                         <button v-on:click="updateRecord(category, index, index2, record.pages, record.note)" class="btn updatebtn" style="float:right" >Update</button>
                                                     </th>
                                                 </tr>
+
                                                 <tr v-if="(record.updateTag)">
                                                     <th>{{index2 + 1}}</th>
                                                     <th>{{record.CreatedAt.split('T')[0]}}</th>
@@ -234,6 +237,31 @@
                                                     <th>
                                                         <button v-on:click="confirmRecord(category, index, index2)" class="btn confirmbtn" style="float:right" >Confirm</button>
                                                         <button v-on:click="cancelRecord(category,index, index2)" class="btn cancelbtn" style="float:right">Cancel</button>
+                                                    </th>
+                                                </tr>
+                                            </tbody>
+                                            <tbody>
+                                                <tr v-if="book.addRecordTag != true">
+                                                    <th></th>
+                                                    <th></th>
+                                                    <th></th>
+                                                    <th></th>
+                                                    <th>
+                                                        <button v-on:click="addRecord(category,index)" class="btn confirmbtn" style="float:right" >Add a record</button>
+                                                    </th>
+                                                </tr>
+                                                <tr v-if="book.addRecordTag">
+                                                    <th>#</th>
+                                                    <th>#</th>
+                                                    <th>
+                                                        <input type="text" size="5" value="updatePages" v-model="updatePages" >
+                                                    </th>
+                                                    <th>
+                                                        <textarea class="form-control" type="text" value="updateDescription" v-model="updateDescription"></textarea>
+                                                    </th>
+                                                    <th>
+                                                        <button v-on:click="confirmAddRecord(category, index)" class="btn confirmbtn" style="float:right" >Confirm</button>
+                                                        <button v-on:click="cancelAddRecord(category,index)" class="btn cancelbtn" style="float:right">Cancel</button>
                                                     </th>
                                                 </tr>
                                             </tbody>
@@ -264,16 +292,16 @@
           overviewList:{},
           updateLock:false,
           deleteLock:false,
+          addLock:false,
           updatePages:0,
           updateDescription:"",
           updateCategory:"",
           updateBookName:""
       },
       created: function () {
-          var vm = this
-          vm.$http.get("http://127.0.0.1:8080/api/v1/users/info?token="+sessionStorage["token"]).then((response) => {
+          this.$http.get("http://127.0.0.1:8080/api/v1/users/info?token="+sessionStorage["token"]).then((response) => {
               this.username = response.data["name"];
-              vm.getBooks();
+              this.getBooks();
           },(response) => {
               sessionStorage.clear();
               location.href = '/templates/welcome.html';
@@ -281,16 +309,17 @@
       },
       methods:{
           getBooks: function () {
-              var vm = this;
+              this.overviewList = {};
               readingBookCount = 0;
               bookRecordCount = 0;
               readCount = 0;
-              vm.$http.get("http://127.0.0.1:8080/api/v1/books/infos?token=" + sessionStorage["token"]).then((response) => {
+              this.$http.get("http://127.0.0.1:8080/api/v1/books/infos?token=" + sessionStorage["token"]).then((response) => {
                   var books = response.data["books"];
                   for(i=0; i < books.length; i++){
                       var read = 0;
                       books[i].updateTag = false;
                       books[i].deleteTag = false;
+                      books[i].addRecordTag = false;
                       for(j=0;j<books[i].records.length;j++) {
                           bookRecordCount++;
                           read += books[i].records[j].pages;
@@ -305,20 +334,20 @@
                           readCount++;
                       }
                       if (typeof this.overviewList[books[i].category] !== 'undefined'){
-                          vm.overviewList[books[i].category].push(books[i]);
+                          this.overviewList[books[i].category].push(books[i]);
                       } else {
-                          vm.overviewList[books[i].category] = [books[i]];
+                          this.overviewList[books[i].category] = [books[i]];
                       }
                   }
 
                   var keys = [];
-                  for (var key in vm.overviewList) {
+                  for (var key in this.overviewList) {
                       keys.push(key);
                   }
-                  vm.overviewReadingBookCount = readingBookCount;
-                  vm.overviewBookRecordCount = bookRecordCount;
-                  vm.overviewReadCount = readCount;
-                  vm.categorys = keys;
+                  this.overviewReadingBookCount = readingBookCount;
+                  this.overviewBookRecordCount = bookRecordCount;
+                  this.overviewReadCount = readCount;
+                  this.categorys = keys;
               },(response) => {
                   sessionStorage.clear();
                   location.href = '/templates/welcome.html';
@@ -327,6 +356,16 @@
           signout: function () {
               sessionStorage.clear();
               location.href = '/templates/welcome.html';
+          },
+          openLock: function () {
+              this.updateLock = false;
+              this.deleteLock = false;
+              this.addLock = false;
+          },
+          closeLock: function () {
+              this.updateLock = true;
+              this.deleteLock = true;
+              this.addLock = true;
           },
           showOverview : function () {
               this.overviewActive = true;
@@ -346,7 +385,7 @@
                   this.booksviewActive = false;
                   this.booksviewActive = true;
 
-                  this.updateLock = true;
+                  this.closeLock();
               }
           },
           deleteBook : function (category, index) {
@@ -355,56 +394,131 @@
                   this.booksviewActive = false;
                   this.booksviewActive = true;
 
-                  this.deleteLock = true;
+                  this.closeLock();
               }
           },
           cancelBook : function (category, index){
               this.overviewList[category][index].updateTag = false;
               this.overviewList[category][index].deleteTag = false;
-              this.updateLock = false;
-              this.deleteLock = false;
+              this.updatePages=0;
+              this.updateDescription="";
+              this.updateCategory="";
+              this.updateBookName="";
+              this.openLock();
               this.booksviewActive = false;
               this.booksviewActive = true;
           },
-          //status 0 = update, 1=delele
           confirmBook : function (category, index){
               if (this.overviewList[category][index].updateTag) {
-                  var vm = this;
                   var updateBody = {
                       "token":sessionStorage["token"],
-                      "bookID":vm.overviewList[category][index].ID,
-                      "name":vm.updateBookName,
-                      "category":vm.updateCategory,
-                      "pages":parseInt(vm.updatePages),
-                      "description":vm.updateDescription
+                      "bookID":this.overviewList[category][index].ID,
+                      "name":this.updateBookName,
+                      "category":this.updateCategory,
+                      "pages":parseInt(this.updatePages),
+                      "description":this.updateDescription
                   }
-                  vm.$http.put("http://127.0.0.1:8080/api/v1/books/update",updateBody).then((response) => {
+                  this.$http.put("http://127.0.0.1:8080/api/v1/books/update",updateBody).then((response) => {
                       this.overviewList = {};
-                      this.updatePages=0;
-                      this.updateDescription="";
-                      this.updateCategory="";
-                      this.updateBookName="";
-                      vm.getBooks();
+                      this.getBooks();
                   },(response) => {
                       alert(response.data["error"])
                   })
               } else if (this.overviewList[category][index].deleteTag){
-                  var vm = this;
                   var deleteBody = {
                       "token":sessionStorage["token"],
                       "bookID":this.overviewList[category][index].ID
                   }
-                  vm.$http.delete("http://127.0.0.1:8080/api/v1/books/delete",{body: deleteBody}).then((response) => {
+                  this.$http.delete("http://127.0.0.1:8080/api/v1/books/delete",{body: deleteBody}).then((response) => {
                       this.overviewList = {};
-                      vm.getBooks();
+                      this.getBooks();
                   },(response) => {
                       alert(response.data["error"])
                   })
               }
               this.overviewList[category][index].updateTag = false;
               this.overviewList[category][index].deleteTag = false;
-              this.updateLock = false;
-              this.deleteLock = false;
+              this.openLock();
+          },
+          addBook : function () {
+
+              if (!this.addLock) {
+                  this.addBookTag = true;
+                  this.closeLock();
+                  this.updatePages=1;
+                  this.booksviewActive = false;
+                  this.booksviewActive = true;
+              }
+          },
+          cancelAddBook : function () {
+              this.addBookTag = false;
+              this.updatePages=0;
+              this.updateDescription="";
+              this.updateCategory="";
+              this.updateBookName="";
+
+              this.openLock();
+              this.booksviewActive = false;
+              this.booksviewActive = true;
+          },
+          comfirmAddBook : function () {
+              var createBody = {
+                  "token": sessionStorage["token"],
+                  "name":this.updateBookName,
+                  "category":this.updateCategory,
+                  "pages":parseInt(this.updatePages),
+                  "description":this.updateDescription
+              }
+
+              this.$http.post("http://127.0.0.1:8080/api/v1/books/create",createBody).then((response) => {
+                  this.getBooks();
+              },(response) => {
+                  alert(response.data["error"])
+              })
+              this.updatePages=0;
+              this.updateDescription="";
+              this.updateCategory="";
+              this.updateBookName="";
+              this.addBookTag = false;
+              this.openLock();
+              this.booksviewActive = false;
+              this.booksviewActive = true;
+          },
+          addRecord : function (category, index) {
+              if (this.addLock != true){
+                  this.overviewList[category][index].addRecordTag = true;
+                  this.booksviewActive = false;
+                  this.booksviewActive = true;
+                  this.closeLock();
+              }
+          },
+          cancelAddRecord : function (category, index) {
+              this.overviewList[category][index].addRecordTag = false;
+              this.booksviewActive = false;
+              this.booksviewActive = true;
+              this.openLock();
+          },
+          confirmAddRecord : function (category, index) {
+              var createBody = {
+                  "token":sessionStorage["token"],
+                  "bookID":this.overviewList[category][index].ID,
+                  "pages":parseInt(this.updatePages),
+                  "note":this.updateDescription
+              }
+
+              this.$http.post("http://127.0.0.1:8080/api/v1/bookrecords/create",createBody).then((response) => {
+                  this.overviewList = {};
+                  this.getBooks();
+              },(response)=>{
+                  alert(response.data["error"])
+              })
+
+              this.overviewList[category][index].addRecordTag = false;
+              this.updatePages=0;
+              this.updateDescription="";
+              this.updateCategory="";
+              this.updateBookName="";
+              this.openLock();
           },
           updateRecord : function (category, index, n, pages, note) {
               if (this.updateLock != true){
@@ -414,7 +528,7 @@
 
                   this.booksviewActive = false;
                   this.booksviewActive = true;
-                  this.updateLock = true;
+                  this.closeLock();
               }
           },
           deleteRecord : function (category, index, n) {
@@ -423,55 +537,51 @@
 
                   this.booksviewActive = false;
                   this.booksviewActive = true;
-                  this.deleteLock = true;
+                  this.closeLock();
               }
           },
           cancelRecord : function (category, index, n){
               this.overviewList[category][index]['records'][n].updateTag = false;
               this.overviewList[category][index]['records'][n].deleteTag = false;
-              this.updateLock = false;
-              this.deleteLock = false;
+              this.openLock();
+
               this.booksviewActive = false;
               this.booksviewActive = true;
           },
           confirmRecord : function (category, index, n){
               if (this.overviewList[category][index]['records'][n].updateTag) {
-                  var vm = this;
                   var updateBody = {
                       "token":sessionStorage["token"],
-                      "bookID":vm.overviewList[category][index].ID,
-                      "recordID":vm.overviewList[category][index]['records'][n].ID,
-                      "pages":parseInt(vm.updatePages),
-                      "note":vm.updateDescription
+                      "bookID":this.overviewList[category][index].ID,
+                      "recordID":this.overviewList[category][index]['records'][n].ID,
+                      "pages":parseInt(this.updatePages),
+                      "note":this.updateDescription
                   }
-                  vm.$http.put("http://127.0.0.1:8080/api/v1/bookrecords/update",updateBody).then((response) => {
-                      this.overviewList = {};
-                      this.updatePages=0;
-                      this.updateDescription="";
-                      this.updateCategory="";
-                      this.updateBookName="";
-                      vm.getBooks();
+                  this.$http.put("http://127.0.0.1:8080/api/v1/bookrecords/update",updateBody).then((response) => {
+                      this.getBooks();
                   },(response) => {
                       alert(response.data["error"])
                   })
+                  this.updatePages=0;
+                  this.updateDescription="";
+                  this.updateCategory="";
+                  this.updateBookName="";
               } else if (this.overviewList[category][index]['records'][n].deleteTag){
-                  var vm = this;
                   var deleteBody = {
                       "token":sessionStorage["token"],
                       "bookID":this.overviewList[category][index].ID,
                       "recordID":this.overviewList[category][index]['records'][n].ID
                   }
-                  vm.$http.delete("http://127.0.0.1:8080/api/v1/books/delete",{body: deleteBody}).then((response) => {
+                  this.$http.delete("http://127.0.0.1:8080/api/v1/books/delete",{body: deleteBody}).then((response) => {
                       this.overviewList = {};
-                      vm.getBooks();
+                      this.getBooks();
                   },(response) => {
                       alert(response.data["error"])
                   })
               }
               this.overviewList[category][index]['records'][n].updateTag = false;
               this.overviewList[category][index]['records'].deleteTag = false;
-              this.updateLock = false;
-              this.deleteLock = false;
+              this.openLock();
           }
       }
   })
