@@ -108,9 +108,9 @@
                                     <thead>
                                         <tr>
                                             <th width="5%">#</th>
-                                            <th width="35%">Title</th>
+                                            <th width="40%">Title</th>
                                             <th>Progress</th>
-                                            <th width="15%">Pages</th>
+                                            <th width="10%">Pages</th>
                                         </tr>
                                     </thead>
                                     <tbody>
@@ -133,19 +133,19 @@
                 </div>
                 <div id="Booksview" v-if="booksviewActive">
                     <div class="col-sm-9 col-sm-offset-3 col-md-10 col-md-offset-2 main">
-                        <button v-if="addBookTag == false" v-on:click="addBook" class="btn updatebtn" style="float:right">Add a book</button>
+                        <button v-if="addBookTag == false" v-on:click="addBook" class="btn confirmbtn" style="float:right">Add a book</button>
                         <div v-if="addBookTag">
                             <button v-on:click="comfirmAddBook" class="btn confirmbtn" style="float:right">Confirm</button>
                             <button v-on:click="cancelAddBook" class="btn cancelbtn" style="float:right">Cancel</button>
                             <div class="row">
-                                <div class="col-md-3">
-                                    <p style="font-size:15px">Title: <span><input type="text" size="20" value="updateBookTitle" v-model="updateBookTitle" ></span></p>
+                                <div class="col-md-4">
+                                    <p style="font-size:15px">Title: <span><input type="text" size="30" value="updateBookTitle" v-model="updateBookTitle" ></span></p>
                                 </div>
                                 <div class="col-md-2">
                                     <p style="font-size:15px">Pages: <span><input type="text" size="5" value="updatePages" v-model="updatePages" ></span></p>
                                 </div>
-                                <div class="col-md-2">
-                                    <p style="font-size:15px">Category: <span><input type="text" size="5" value="updateCategory" v-model="updateCategory"></span></p>
+                                <div class="col-md-3">
+                                    <p style="font-size:15px">Category: <span><input type="text" size="20" value="updateCategory" v-model="updateCategory"></span></p>
                                 </div>
                             </div>
                             <p style="font-size:15px">Description:</p>
@@ -185,17 +185,14 @@
                                         </div>
                                         <div id="bookinfoupdate" v-if="book.updateTag">
                                             <div class="row">
-                                                <div class=" col-md-3">
-                                                    <p style="font-size:15px">Started from: {{book.CreatedAt.split('T')[0]}}</p>
-                                                </div>
                                                 <div class="col-md-3">
-                                                    <p style="font-size:15px">Title: <span><input type="text" size="20" value="updateBookTitle" v-model="updateBookTitle" ></span></p>
+                                                    <p style="font-size:15px">Title: <span><input type="text" size="22" value="updateBookTitle" v-model="updateBookTitle" ></span></p>
                                                 </div>
                                                 <div class="col-md-2">
-                                                    <p style="font-size:15px">Pages: <span><input type="text" size="4" value="updatePages" v-model="updatePages" ></span></p>
+                                                    <p style="font-size:15px">Pages: <span><input type="text" size="5" value="updatePages" v-model="updatePages" ></span></p>
                                                 </div>
-                                                <div class="col-md-2">
-                                                    <p style="font-size:15px">Category: <span><input type="text" size="8" value="updateCategory" v-model="updateCategory"></span></p>
+                                                <div class="col-md-4">
+                                                    <p style="font-size:15px">Category: <span><input type="text" size="20" value="updateCategory" v-model="updateCategory"></span></p>
                                                 </div>
                                             </div>
                                             <p style="font-size:15px">Progress:</p>
@@ -424,13 +421,26 @@
                       this.overviewList[category][index].category = updateBody.category;
                       this.overviewList[category][index].description = updateBody.description;
                       var book = this.overviewList[category][index];
+                      book.updateTag = false;
                       if (updateBody.category !== category) {
                           if (typeof this.overviewList[updateBody.category] !== 'undefined'){
                               this.overviewList[updateBody.category].push(book);
                           } else {
                               this.overviewList[updateBody.category] = [book];
+                              this.categorys.push(updateBody.category);
                           }
+
                           this.$delete(this.overviewList[category],index);
+                          if(this.overviewList[category].length == 0){
+                              var categoryindex=0;
+                              for (var i=0;i < this.categorys.length; i++){
+                                  if(category === this.categorys[i]) {
+                                      categoryindex = i;
+                                    break;
+                                  }
+                              }
+                              this.$delete(this.categorys,categoryindex);
+                          }
                       }
                       this.openLock();
                       this.resetVarBooksview();
@@ -449,6 +459,17 @@
                   }
                   this.$http.delete("http://127.0.0.1:8080/api/v1/books/delete",{body: deleteBody}).then((response) => {
                       this.$delete(this.overviewList[category],index);
+                      if(this.overviewList[category].length == 0){
+                          var index=0;
+                          for (var i=0;i < this.categorys.length; i++){
+                              if(category === this.categorys[i]) {
+                                  index = i;
+                                break;
+                              }
+                          }
+                          this.$delete(this.categorys,index);
+                      }
+                      this.openLock();
                       this.$forceUpdate();
                   },(response) => {
                       alert(response.data["error"])
@@ -490,10 +511,13 @@
 
               this.$http.post("http://127.0.0.1:8080/api/v1/books/create",createBody).then((response) => {
                   var book = response.data["book"];
-                  if (typeof this.overviewList[book.category] !== 'undefined'){
-                      this.overviewList[book.category].push(book);
+                  book.read = 0;
+                  book.records = [];
+                  if (typeof this.overviewList[createBody.category] !== 'undefined'){
+                      this.overviewList[createBody.category].push(book);
                   } else {
-                      this.overviewList[book.category]= [book];
+                      this.categorys.push(createBody.category);
+                      this.overviewList[createBody.category] = [book];
                   }
                   this.resetVarBooksview();
                   this.addBookTag = false;
