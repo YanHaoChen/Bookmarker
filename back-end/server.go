@@ -330,7 +330,7 @@ func CreateBook(c *gin.Context)  {
             if err := db.Model(&user).Association("Books").Append(&book).Error; err != nil {
                 c.JSON(406, gin.H{"error":"Can't append this book."})
             } else {
-                c.JSON(201, gin.H{"status":"Created"})
+                c.JSON(201, gin.H{"book":book})
             }
         }
     } else {
@@ -482,7 +482,7 @@ func CreateBookRecord(c *gin.Context) {
             if err := db.Model(&book).Association("Records").Append(&bookRecord).Error; err != nil {
                 c.JSON(406, gin.H{"error":"Can't append this BookRecord."})
             } else {
-                c.JSON(201, gin.H{"status":"Created"})
+                c.JSON(201, gin.H{"record":bookRecord})
             }
         }
     } else {
