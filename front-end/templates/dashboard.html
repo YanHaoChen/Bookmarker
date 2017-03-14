@@ -101,7 +101,7 @@
                             </div>
                         </div>
                         <br/>
-                        <div id="category" v-for="category in categorys">
+                        <div id="category" v-for="category in categorys" v-bind:value="category.value">
                             <h1 class="page-header">{{category}}</h1>
                             <div class="table-responsive">
                                 <table class="table table-striped">
@@ -115,7 +115,7 @@
                                     </thead>
                                     <tbody>
 
-                                        <tr v-for="(book, index) in overviewList[category]">
+                                        <tr v-for="(book, index) in overviewList[category]" v-bind:value="book.value">
                                             <td >{{index + 1}}</td>
                                             <td>{{book.title}}</td>
                                             <td>
@@ -151,16 +151,16 @@
                             <p style="font-size:15px">Description:</p>
                             <textarea class="form-control" type="text" value="updateDescription" v-model="updateDescription"></textarea>
                         </div>
-                        <div id="Category" v-for="category in categorys">
+                        <div id="Category" v-for="category in categorys" v-bind:value="category.value">
                             <h1 class="page-header">{{category}}</h1>
-                            <div id="Booksviewlist" v-for="(book, index) in overviewList[category]">
+                            <div id="Booksviewlist" v-for="(book, index) in overviewList[category]" v-bind:value="book.value">
                                 <div class="panel panel-default">
                                     <div class="panel-heading" style="font-size:20px">{{book.title}}</div>
                                     <div class="panel-body">
-                                        <button v-on:click="deleteBook(category, index)" class="btn deletebtn" style="float:right" v-if="(book.updateTag || book.deleteTag) != true">Delete</button>
-                                        <button v-on:click="updateBook(category,index, book.title, book.pages, book.description)" class="btn updatebtn" style="float:right" v-if="(book.updateTag || book.deleteTag) != true">Update</button>
-                                        <button v-on:click="confirmBook(category, index)" class="btn confirmbtn" style="float:right" v-if="(book.updateTag || book.deleteTag)">Confirm</button>
-                                        <button v-on:click="cancelBook(category,index)" class="btn cancelbtn" style="float:right" v-if="(book.updateTag || book.deleteTag)">Cancel</button>
+                                        <button v-on:click="deleteBook(book.category, index)" class="btn deletebtn" style="float:right" v-if="(book.updateTag || book.deleteTag) != true">Delete</button>
+                                        <button v-on:click="updateBook(book.category,index, book.title, book.pages, book.description)" class="btn updatebtn" style="float:right" v-if="(book.updateTag || book.deleteTag) != true">Update</button>
+                                        <button v-on:click="confirmBook(book.category, index)" class="btn confirmbtn" style="float:right" v-if="(book.updateTag || book.deleteTag)">Confirm</button>
+                                        <button v-on:click="cancelBook(book.category,index)" class="btn cancelbtn" style="float:right" v-if="(book.updateTag || book.deleteTag)">Cancel</button>
 
                                         <div id="bookinfo" v-if="book.updateTag != true">
                                             <div class="row">
@@ -171,7 +171,7 @@
                                                     <p style="font-size:15px">Pages: {{book.pages}}</p>
                                                 </div>
                                                 <div class="col-md-3">
-                                                    <p style="font-size:15px">Category: {{category}}</p>
+                                                    <p style="font-size:15px">Category: {{book.category}}</p>
                                                 </div>
                                             </div>
                                             <p style="font-size:15px">Progress:</p>
@@ -216,15 +216,18 @@
                                                     <th width="18%"></th>
                                                 </tr>
                                             </thead>
-                                            <tbody v-for="(record, index2) in book['records']">
+                                            <tbody v-for="(record, index2) in book.records" v-bind:value="record.value">
                                                 <tr v-if="record.updateTag != true">
                                                     <td>{{index2 + 1}}</td>
                                                     <td>{{record.CreatedAt.split('T')[0]}}</td>
                                                     <td>{{record.pages}}</td>
                                                     <td>{{record.note}}</td>
                                                     <td>
-                                                        <button v-on:click="deleteRecord(category, index, index2)" class="btn deletebtn" style="float:right" >Delete</button>
-                                                        <button v-on:click="updateRecord(category, index, index2, record.pages, record.note)" class="btn updatebtn" style="float:right" >Update</button>
+                                                        <button v-if="record.deleteTag != true" v-on:click="deleteRecord(category, index, index2)" class="btn deletebtn" style="float:right" >Delete</button>
+                                                        <button v-if="record.deleteTag != true" v-on:click="updateRecord(category, index, index2, record.pages, record.note)" class="btn updatebtn" style="float:right" >Update</button>
+                                                        <button v-if="record.deleteTag" v-on:click="confirmRecord(book.category, index, index2)" class="btn confirmbtn" style="float:right" >Confirm</button>
+                                                        <button v-if="record.deleteTag" v-on:click="cancelRecord(book.category,index, index2)" class="btn cancelbtn" style="float:right">Cancel</button>
+                                                    </td>
                                                     </td>
                                                 </tr>
 
@@ -238,8 +241,8 @@
                                                         <textarea class="form-control" type="text" value="updateDescription" v-model="updateDescription"></textarea>
                                                     </td>
                                                     <td>
-                                                        <button v-on:click="confirmRecord(category, index, index2)" class="btn confirmbtn" style="float:right" >Confirm</button>
-                                                        <button v-on:click="cancelRecord(category,index, index2)" class="btn cancelbtn" style="float:right">Cancel</button>
+                                                        <button v-on:click="confirmRecord(book.category, index, index2)" class="btn confirmbtn" style="float:right" >Confirm</button>
+                                                        <button v-on:click="cancelRecord(book.category,index, index2)" class="btn cancelbtn" style="float:right">Cancel</button>
                                                     </td>
                                                 </tr>
                                             </tbody>
@@ -378,6 +381,16 @@
               this.overviewActive = false;
               this.booksviewActive = true;
           },
+          resetVarBooksview : function () {
+              this.updatePages=0;
+              this.updateDescription="";
+              this.updateCategory="";
+              this.updateBookTitle="";
+          },
+          refreshBooksview : function () {
+              this.booksviewActive = false;
+              this.booksviewActive = true;
+          },
           updateBook : function (category, index, title, pages, description) {
               if (this.updateLock != true){
                   this.overviewList[category][index].updateTag = true;
@@ -385,31 +398,24 @@
                   this.updateDescription = description;
                   this.updateBookTitle = title;
                   this.updateCategory = category;
-                  this.booksviewActive = false;
-                  this.booksviewActive = true;
-
+                  this.refreshBooksview();
                   this.closeLock();
               }
           },
           deleteBook : function (category, index) {
               if (this.deleteLock != true){
                   this.overviewList[category][index].deleteTag = true;
-                  this.booksviewActive = false;
-                  this.booksviewActive = true;
-
+                  this.refreshBooksview();
                   this.closeLock();
               }
           },
           cancelBook : function (category, index){
               this.overviewList[category][index].updateTag = false;
               this.overviewList[category][index].deleteTag = false;
-              this.updatePages=0;
-              this.updateDescription="";
-              this.updateCategory="";
-              this.updateBookTitle="";
+              this.resetVarBooksview();
               this.openLock();
-              this.booksviewActive = false;
-              this.booksviewActive = true;
+              this.refreshBooksview();
+
           },
           confirmBook : function (category, index){
               if (this.overviewList[category][index].updateTag) {
@@ -422,12 +428,16 @@
                       "description":this.updateDescription
                   }
                   this.$http.put("http://127.0.0.1:8080/api/v1/books/update",updateBody).then((response) => {
-                      this.overviewList = {};
-                      this.getBooks();
-                      this.updatePages=0;
-                      this.updateDescription="";
-                      this.updateCategory="";
-                      this.updateBookTitle="";
+
+                      this.overviewList[category][index].pages =  updateBody.pages;
+                      this.overviewList[category][index].title = updateBody.title;
+                      this.overviewList[category][index].category = updateBody.category;
+                      this.overviewList[category][index].description = updateBody.description;
+                      if (updateBody.category !== category) {
+                          this.overviewList = {};
+                          this.getBooks();
+                      }
+                      this.resetVarBooksview();
                   },(response) => {
                       alert(response.data["error"])
                   })
@@ -451,22 +461,17 @@
 
               if (!this.addLock) {
                   this.addBookTag = true;
-                  this.closeLock();
                   this.updatePages=1;
-                  this.booksviewActive = false;
-                  this.booksviewActive = true;
+                  this.closeLock();
+                  this.refreshBooksview();
               }
           },
           cancelAddBook : function () {
               this.addBookTag = false;
-              this.updatePages=0;
-              this.updateDescription="";
-              this.updateCategory="";
-              this.updateBookTitle="";
-
+              this.resetVarBooksview();
               this.openLock();
-              this.booksviewActive = false;
-              this.booksviewActive = true;
+              this.refreshBooksview();
+
           },
           comfirmAddBook : function () {
               var createBody = {
@@ -482,28 +487,23 @@
               },(response) => {
                   alert(response.data["error"])
               })
-              this.updatePages=0;
-              this.updateDescription="";
-              this.updateCategory="";
-              this.updateBookTitle="";
+
               this.addBookTag = false;
+              this.resetVarBooksview();
               this.openLock();
-              this.booksviewActive = false;
-              this.booksviewActive = true;
+              this.refreshBooksview();
           },
           addRecord : function (category, index) {
               if (this.addLock != true){
                   this.overviewList[category][index].addRecordTag = true;
-                  this.booksviewActive = false;
-                  this.booksviewActive = true;
                   this.closeLock();
+                  this.refreshBooksview();
               }
           },
           cancelAddRecord : function (category, index) {
               this.overviewList[category][index].addRecordTag = false;
-              this.booksviewActive = false;
-              this.booksviewActive = true;
               this.openLock();
+              this.refreshBooksview();
           },
           confirmAddRecord : function (category, index) {
               var createBody = {
@@ -521,10 +521,7 @@
               })
 
               this.overviewList[category][index].addRecordTag = false;
-              this.updatePages=0;
-              this.updateDescription="";
-              this.updateCategory="";
-              this.updateBookTitle="";
+              this.resetVarBooksview();
               this.openLock();
           },
           updateRecord : function (category, index, n, pages, note) {
@@ -532,28 +529,22 @@
                   this.overviewList[category][index]['records'][n].updateTag = true;
                   this.updatePages = pages;
                   this.updateDescription = note;
-
-                  this.booksviewActive = false;
-                  this.booksviewActive = true;
                   this.closeLock();
+                  this.refreshBooksview();
               }
           },
           deleteRecord : function (category, index, n) {
               if (this.deleteLock != true){
                   this.overviewList[category][index]['records'][n].deleteTag = true;
-
-                  this.booksviewActive = false;
-                  this.booksviewActive = true;
-                  this.closeLock();
+                  this.openLock();
+                  this.refreshBooksview();
               }
           },
           cancelRecord : function (category, index, n){
               this.overviewList[category][index]['records'][n].updateTag = false;
               this.overviewList[category][index]['records'][n].deleteTag = false;
               this.openLock();
-
-              this.booksviewActive = false;
-              this.booksviewActive = true;
+              this.refreshBooksview();
           },
           confirmRecord : function (category, index, n){
               if (this.overviewList[category][index]['records'][n].updateTag) {
@@ -564,24 +555,28 @@
                       "pages":parseInt(this.updatePages),
                       "note":this.updateDescription
                   }
+
                   this.$http.put("http://127.0.0.1:8080/api/v1/bookrecords/update",updateBody).then((response) => {
-                      this.getBooks();
+                      this.overviewList[category][index].read -= this.overviewList[category][index]['records'][n].pages;
+                      this.overviewList[category][index].read += updateBody.pages;
+                      this.overviewList[category][index]['records'][n].pages = updateBody.pages;
+                      this.overviewList[category][index]['records'][n].note = updateBody.note;
+                      this.refreshBooksview();
                   },(response) => {
                       alert(response.data["error"])
                   })
-                  this.updatePages=0;
-                  this.updateDescription="";
-                  this.updateCategory="";
-                  this.updateBookTitle="";
+                  this.resetVarBooksview();
+
               } else if (this.overviewList[category][index]['records'][n].deleteTag){
                   var deleteBody = {
                       "token":sessionStorage["token"],
                       "bookID":this.overviewList[category][index].ID,
                       "recordID":this.overviewList[category][index]['records'][n].ID
                   }
-                  this.$http.delete("http://127.0.0.1:8080/api/v1/books/delete",{body: deleteBody}).then((response) => {
-                      this.overviewList = {};
-                      this.getBooks();
+                  this.$http.delete("http://127.0.0.1:8080/api/v1/bookrecords/delete",{body: deleteBody}).then((response) => {
+                      this.overviewList[category][index].read -= this.overviewList[category][index]['records'][n].pages;
+                      Vue.delete(this.overviewList[category][index]['records'],n);
+                      this.refreshBooksview();
                   },(response) => {
                       alert(response.data["error"])
                   })
@@ -589,6 +584,7 @@
               this.overviewList[category][index]['records'][n].updateTag = false;
               this.overviewList[category][index]['records'].deleteTag = false;
               this.openLock();
+
           }
       }
   })
