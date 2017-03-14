@@ -20,7 +20,7 @@ type Users struct {
 type Books struct {
     gorm.Model
     UserID uint `form:"userID" json:"userID"`
-    Name string `gorm:"not null" form:"name" json:"name"`
+    Title string `gorm:"not null" form:"title" json:"title"`
     Category string `gorm:"not null" form:"category" json:"category"`
     Pages  int `gorm:"not null" form:"pages" json:"pages"`
     Records []BookRecords `gorm:"ForeignKey:BookID" form:"records" json:"records"`
@@ -109,21 +109,21 @@ func main() {
         v1.PUT("/users/updatepasswd",UpdateUserPasswd)
 
         /* book */
-        /* token:string name:string category:string pages:int description:string */
+        /* token:string title:string category:string pages:int description:string */
         v1.POST("/books/create", CreateBook)
         /* token:string */
         v1.GET("/books/infos", BookInfos)
-        /* token:string bookID:uint name:string category:string pages:int description:string */
+        /* token:string bookID:uint title:string category:string pages:int description:string */
         v1.PUT("/books/update", UpdateBook)
         /* token:string bookID:uint */
         v1.DELETE("/books/delete",DeleteBook)
 
         /* BookRecord */
-        /* token:string bookID:string pages:int note:string */
+        /* token:string bookID:uint pages:int note:string */
         v1.POST("/bookrecords/create",CreateBookRecord)
         /* token:string */
         v1.GET("/bookrecords/infos",BookRecordInfos)
-        /* token:string bookID:string recordID:uint pages:int note:string */
+        /* token:string bookID:uint recordID:uint pages:int note:string */
         v1.PUT("/bookrecords/update",UpdateBookRecord)
         /* token:string bookID:uint recordID:uint */
         v1.DELETE("/bookrecords/delete",DeleteBookRecord)
@@ -296,7 +296,7 @@ func UpdateUserPasswd(c *gin.Context)  {
 
 type CreateBookParams struct {
      Token string `form:"token" json:"token"`
-     Name string `form:"name" json:"name"`
+     Title string `form:"title" json:"title"`
      Category string `form:"category" json:"category"`
      Pages  int `form:"pages" json:"pages"`
      Description string `form:"description" json:"description"`
@@ -313,11 +313,11 @@ func CreateBook(c *gin.Context)  {
         return
     }
 
-    if CreateBookParams.Name != "" && CreateBookParams.Category != "" && CreateBookParams.Pages > 0 {
+    if CreateBookParams.Title != "" && CreateBookParams.Category != "" && CreateBookParams.Pages > 0 {
         db := InitDb()
         defer db.Close()
         book := Books{
-            Name : CreateBookParams.Name,
+            Title : CreateBookParams.Title,
             Category : CreateBookParams.Category,
             Pages : CreateBookParams.Pages,
             Description : CreateBookParams.Description,
@@ -365,7 +365,7 @@ func BookInfos(c *gin.Context)  {
 type UpdateBookParams struct {
     Token string `form:"token" json:"token"`
     BookID uint `form:"bookID" json:"bookID"`
-    Name string `form:"name" json:"name"`
+    Title string `form:"title" json:"title"`
     Category string `form:"category" json:"category"`
     Pages  int `form:"pages" json:"pages"`
     Description string `form:"description" json:"description"`
@@ -381,7 +381,7 @@ func UpdateBook(c *gin.Context)  {
         c.JSON(403, gin.H{"error":"No permission."})
         return
     }
-    if updateBookParams.Name != "" && updateBookParams.Category != "" && updateBookParams.Pages > 0 {
+    if updateBookParams.Title != "" && updateBookParams.Category != "" && updateBookParams.Pages > 0 {
         db := InitDb()
         defer db.Close()
         book := Books{}
@@ -398,7 +398,7 @@ func UpdateBook(c *gin.Context)  {
             return
         }
 
-        book.Name = updateBookParams.Name
+        book.Title = updateBookParams.Title
         book.Category = updateBookParams.Category
         book.Pages = updateBookParams.Pages
         book.Description = updateBookParams.Description
