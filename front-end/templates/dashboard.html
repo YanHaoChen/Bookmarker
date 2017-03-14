@@ -185,17 +185,17 @@
                                         </div>
                                         <div id="bookinfoupdate" v-if="book.updateTag">
                                             <div class="row">
-                                                <div class=" col-md-2">
+                                                <div class=" col-md-3">
                                                     <p style="font-size:15px">Started from: {{book.CreatedAt.split('T')[0]}}</p>
                                                 </div>
                                                 <div class="col-md-3">
                                                     <p style="font-size:15px">Title: <span><input type="text" size="20" value="updateBookTitle" v-model="updateBookTitle" ></span></p>
                                                 </div>
                                                 <div class="col-md-2">
-                                                    <p style="font-size:15px">Pages: <span><input type="text" size="5" value="updatePages" v-model="updatePages" ></span></p>
+                                                    <p style="font-size:15px">Pages: <span><input type="text" size="4" value="updatePages" v-model="updatePages" ></span></p>
                                                 </div>
                                                 <div class="col-md-2">
-                                                    <p style="font-size:15px">Category: <span><input type="text" size="5" value="updateCategory" v-model="updateCategory"></span></p>
+                                                    <p style="font-size:15px">Category: <span><input type="text" size="8" value="updateCategory" v-model="updateCategory"></span></p>
                                                 </div>
                                             </div>
                                             <p style="font-size:15px">Progress:</p>
@@ -296,9 +296,7 @@
           overviewReadCount: 0,
           categorys:[],
           overviewList:{},
-          updateLock:false,
-          deleteLock:false,
-          addLock:false,
+          activeLock:false,
           updatePages:0,
           updateDescription:"",
           updateCategory:"",
@@ -364,16 +362,14 @@
               location.href = '/templates/welcome.html';
           },
           openLock: function () {
-              this.updateLock = false;
-              this.deleteLock = false;
-              this.addLock = false;
+              this.activeLock = false;
           },
           closeLock: function () {
-              this.updateLock = true;
-              this.deleteLock = true;
-              this.addLock = true;
+              this.activeLock = true;
           },
           showOverview : function () {
+              this.overviewList = {};
+              this.getBooks();
               this.overviewActive = true;
               this.booksviewActive = false;
           },
@@ -387,26 +383,22 @@
               this.updateCategory="";
               this.updateBookTitle="";
           },
-          refreshBooksview : function () {
-              this.booksviewActive = false;
-              this.booksviewActive = true;
-          },
           updateBook : function (category, index, title, pages, description) {
-              if (this.updateLock != true){
+              if (!this.activeLock){
                   this.overviewList[category][index].updateTag = true;
                   this.updatePages = pages;
                   this.updateDescription = description;
                   this.updateBookTitle = title;
                   this.updateCategory = category;
-                  this.refreshBooksview();
                   this.closeLock();
+                  this.$forceUpdate();
               }
           },
           deleteBook : function (category, index) {
-              if (this.deleteLock != true){
+              if (!this.activeLock){
                   this.overviewList[category][index].deleteTag = true;
-                  this.refreshBooksview();
                   this.closeLock();
+                  this.$forceUpdate();
               }
           },
           cancelBook : function (category, index){
@@ -414,8 +406,7 @@
               this.overviewList[category][index].deleteTag = false;
               this.resetVarBooksview();
               this.openLock();
-              this.refreshBooksview();
-
+               this.$forceUpdate();
           },
           confirmBook : function (category, index){
               if (this.overviewList[category][index].updateTag) {
@@ -428,18 +419,28 @@
                       "description":this.updateDescription
                   }
                   this.$http.put("http://127.0.0.1:8080/api/v1/books/update",updateBody).then((response) => {
-
                       this.overviewList[category][index].pages =  updateBody.pages;
                       this.overviewList[category][index].title = updateBody.title;
                       this.overviewList[category][index].category = updateBody.category;
                       this.overviewList[category][index].description = updateBody.description;
+                      var book = this.overviewList[category][index];
                       if (updateBody.category !== category) {
-                          this.overviewList = {};
-                          this.getBooks();
+                          if (typeof this.overviewList[updateBody.category] !== 'undefined'){
+                              this.overviewList[updateBody.category].push(book);
+                          } else {
+                              this.overviewList[updateBody.category] = [book];
+                          }
+                          this.$delete(this.overviewList[category],index);
                       }
+                      this.openLock();
                       this.resetVarBooksview();
+                      this.$forceUpdate();
                   },(response) => {
                       alert(response.data["error"])
+                      this.overviewList[category][index].updateTag = false;
+                      this.overviewList[category][index].deleteTag = false;
+                      this.openLock();
+                      this.$forceUpdate();
                   })
               } else if (this.overviewList[category][index].deleteTag){
                   var deleteBody = {
@@ -447,30 +448,35 @@
                       "bookID":this.overviewList[category][index].ID
                   }
                   this.$http.delete("http://127.0.0.1:8080/api/v1/books/delete",{body: deleteBody}).then((response) => {
-                      this.overviewList = {};
-                      this.getBooks();
+                      this.$delete(this.overviewList[category],index);
+                      this.$forceUpdate();
                   },(response) => {
                       alert(response.data["error"])
+                      this.overviewList[category][index].updateTag = false;
+                      this.overviewList[category][index].deleteTag = false;
+                      this.openLock();
+                      this.$forceUpdate();
                   })
+              } else {
+                  this.overviewList[category][index].updateTag = false;
+                  this.overviewList[category][index].deleteTag = false;
+                  this.openLock();
+                  this.$forceUpdate();
               }
-              this.overviewList[category][index].updateTag = false;
-              this.overviewList[category][index].deleteTag = false;
-              this.openLock();
           },
           addBook : function () {
-
-              if (!this.addLock) {
+              if (!this.activeLock) {
                   this.addBookTag = true;
                   this.updatePages=1;
                   this.closeLock();
-                  this.refreshBooksview();
+                  this.$forceUpdate();
               }
           },
           cancelAddBook : function () {
               this.addBookTag = false;
               this.resetVarBooksview();
               this.openLock();
-              this.refreshBooksview();
+              this.$forceUpdate();
 
           },
           comfirmAddBook : function () {
@@ -483,27 +489,36 @@
               }
 
               this.$http.post("http://127.0.0.1:8080/api/v1/books/create",createBody).then((response) => {
-                  this.getBooks();
+                  var book = response.data["book"];
+                  if (typeof this.overviewList[book.category] !== 'undefined'){
+                      this.overviewList[book.category].push(book);
+                  } else {
+                      this.overviewList[book.category]= [book];
+                  }
+                  this.resetVarBooksview();
+                  this.addBookTag = false;
+                  this.openLock();
+                  this.$forceUpdate();
               },(response) => {
                   alert(response.data["error"])
+                  this.addBookTag = false;
+                  this.openLock();
+                  this.$forceUpdate();
               })
-
-              this.addBookTag = false;
-              this.resetVarBooksview();
-              this.openLock();
-              this.refreshBooksview();
           },
           addRecord : function (category, index) {
-              if (this.addLock != true){
+              if (!this.activeLock){
                   this.overviewList[category][index].addRecordTag = true;
+                  this.resetVarBooksview()
                   this.closeLock();
-                  this.refreshBooksview();
+                   this.$forceUpdate();
               }
           },
           cancelAddRecord : function (category, index) {
               this.overviewList[category][index].addRecordTag = false;
+              this.resetVarBooksview();
               this.openLock();
-              this.refreshBooksview();
+               this.$forceUpdate();
           },
           confirmAddRecord : function (category, index) {
               var createBody = {
@@ -514,37 +529,47 @@
               }
 
               this.$http.post("http://127.0.0.1:8080/api/v1/bookrecords/create",createBody).then((response) => {
-                   this.overviewList = {};
-                   this.getBooks();
+                  var record = response.data["record"];
+                  record.updateTag = false;
+                  record.deleteTag = false;
+                  this.overviewList[category][index].read +=  createBody.pages;
+                  this.overviewList[category][index].records.push(record);
+                  this.overviewList[category][index].addRecordTag = false;
+                  this.resetVarBooksview();
+                  this.openLock();
+                  this.$forceUpdate();
               },(response)=>{
                   alert(response.data["error"])
+                  this.overviewList[category][index].addRecordTag = false;
+                  this.resetVarBooksview();
+                  this.openLock();
+                  this.$forceUpdate();
+
               })
 
-              this.overviewList[category][index].addRecordTag = false;
-              this.resetVarBooksview();
-              this.openLock();
+
           },
           updateRecord : function (category, index, n, pages, note) {
-              if (this.updateLock != true){
+              if (!this.activeLock){
                   this.overviewList[category][index]['records'][n].updateTag = true;
                   this.updatePages = pages;
                   this.updateDescription = note;
                   this.closeLock();
-                  this.refreshBooksview();
+                   this.$forceUpdate();
               }
           },
           deleteRecord : function (category, index, n) {
-              if (this.deleteLock != true){
+              if (!this.activeLock){
                   this.overviewList[category][index]['records'][n].deleteTag = true;
                   this.openLock();
-                  this.refreshBooksview();
+                   this.$forceUpdate();
               }
           },
           cancelRecord : function (category, index, n){
               this.overviewList[category][index]['records'][n].updateTag = false;
               this.overviewList[category][index]['records'][n].deleteTag = false;
               this.openLock();
-              this.refreshBooksview();
+               this.$forceUpdate();
           },
           confirmRecord : function (category, index, n){
               if (this.overviewList[category][index]['records'][n].updateTag) {
@@ -561,12 +586,14 @@
                       this.overviewList[category][index].read += updateBody.pages;
                       this.overviewList[category][index]['records'][n].pages = updateBody.pages;
                       this.overviewList[category][index]['records'][n].note = updateBody.note;
-                      this.refreshBooksview();
+                      this.overviewList[category][index]['records'][n].updateTag = false;
+                      this.openLock();
+                      this.$forceUpdate();
+
                   },(response) => {
                       alert(response.data["error"])
                   })
                   this.resetVarBooksview();
-
               } else if (this.overviewList[category][index]['records'][n].deleteTag){
                   var deleteBody = {
                       "token":sessionStorage["token"],
@@ -576,15 +603,16 @@
                   this.$http.delete("http://127.0.0.1:8080/api/v1/bookrecords/delete",{body: deleteBody}).then((response) => {
                       this.overviewList[category][index].read -= this.overviewList[category][index]['records'][n].pages;
                       Vue.delete(this.overviewList[category][index]['records'],n);
-                      this.refreshBooksview();
+                       this.openLock();
+                       this.$forceUpdate();
                   },(response) => {
                       alert(response.data["error"])
+                      this.overviewList[category][index]['records'][n].updateTag = false;
+                      this.overviewList[category][index]['records'][n].deleteTag = false;
+                      this.openLock();
+                      this.$forceUpdate();
                   })
               }
-              this.overviewList[category][index]['records'][n].updateTag = false;
-              this.overviewList[category][index]['records'].deleteTag = false;
-              this.openLock();
-
           }
       }
   })
