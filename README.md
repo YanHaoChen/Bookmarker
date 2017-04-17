@@ -9,6 +9,14 @@
 
 前端 Vue 的部分，還沒有很完善的架構，只確定運作正常，待往後繼續調整。
 
+## 建立使用者帳號
+
+請使用 API：CreateUser
+
+Name | Method | URL | Params
+--- | --- | --- | ---
+CreateUser | POST | /users/create |Account:string passwd:string name:string email:string
+
 ## Front-end Server
 
 直接將資料夾 [front-end](https://github.com/YanHaoChen/Bookmarker/tree/master/front-end) 放入 Apache Server 上即可。
@@ -50,7 +58,7 @@ Name | Method | URL | Params
 --- | --- | --- | ---
 CreateBook | POST | /books/create |token:string name:string category:string pages:int description:string
 BookInfos | GET | /books/infos?token= | token:string
-UpdateBook | PUT | /books/update |token:string bookID:uint name:string category:string pages:int description:string
+UpdateBook | PUT | /books/update |token:string bookID:uint title:string category:string pages:int description:string
 DeleteBook | DELETE | /books/delete | token:string bookID:uint
 
 ### BookRecord
