@@ -2,6 +2,7 @@ package main
 
 import (
     "crypto/rand"
+    "crypto/sha256"
 	"fmt"
     "github.com/gin-gonic/gin"
     "github.com/jinzhu/gorm"
@@ -187,6 +188,8 @@ func CreateUser(c *gin.Context) {
 
     c.Bind(&user)
     if user.Account != "" && user.Passwd != "" && user.Name != "" && user.Email != "" {
+        sum := sha256.Sum256([]byte(user.Passwd))
+	    user.Passwd = fmt.Sprintf("%x", sum)
         if err := db.Create(&user).Error; err != nil {
             c.JSON(422, gin.H{"error":"There are some things wrong."})
         } else {
